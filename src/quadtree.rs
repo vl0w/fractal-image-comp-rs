@@ -1,4 +1,6 @@
 use crate::image::Image;
+use crate::quadtree::blocks::IntoSquaredBlocks;
+use crate::quadtree::scaled::IntoLazily2x2Scaled;
 
 struct Options {
     min_quadtree_depth: u8,
@@ -15,14 +17,102 @@ impl Options {
     }
 }
 
-fn compress<I: Image>(image: I, options: Options) {}
+fn compress<I: Image>(image: I, options: Options) {
+    let range_blocks = image.squared_blocks(4);
+    let _ = range_blocks.map(|b| b.downscale_2x2());
+}
 
+
+mod scaled {
+    use crate::image::{Image, Pixel};
+
+    pub struct Lazily2x2Scaled<'a, I: Image> {
+        image: &'a I,
+    }
+
+    impl<'a, I: Image> Image for Lazily2x2Scaled<'a, I> {
+        fn get_width(&self) -> u32 {
+            self.image.get_width() / 2
+        }
+
+        fn get_height(&self) -> u32 {
+            self.image.get_height() / 2
+        }
+
+        fn pixel(&self, x: u32, y: u32) -> Pixel {
+            let sum = self.image.pixel(2 * x, 2 * y) +
+                self.image.pixel(2 * x + 1, 2 * y) +
+                self.image.pixel(2 * x, 2 * y + 1) +
+                self.image.pixel(2 * x + 1, 2 * y + 1);
+            (0.25 * sum as f64) as Pixel
+        }
+    }
+
+    pub trait IntoLazily2x2Scaled<'a, I> where I: Image + 'a {
+        fn downscale_2x2(&'a self) -> Lazily2x2Scaled<'a, I>;
+    }
+
+    impl<'a, I> IntoLazily2x2Scaled<'a, I> for I where I: Image + 'a {
+        fn downscale_2x2(&'a self) -> Lazily2x2Scaled<'a, I> {
+            Lazily2x2Scaled {
+                image: self
+            }
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use crate::image::Image;
+        use crate::quadtree::scaled::IntoLazily2x2Scaled;
+        use crate::testutils::FakeImage;
+
+        #[test]
+        fn downscaled_size() {
+            let image = FakeImage::new(16, 16);
+            let scaled = image.downscale_2x2();
+            assert_eq!(scaled.get_width(), 8);
+            assert_eq!(scaled.get_height(), 8);
+        }
+
+        #[test]
+        fn groups_2x2_pixels_of_original_image() {
+            // Original image
+            // 0  1  2  3
+            // 4  5  6  7
+            // 8  9  10 11
+            // 12 13 14 15
+
+            let image = FakeImage::new(4, 4);
+            let scaled = image.downscale_2x2();
+            assert_eq!(scaled.pixel(0, 0), (1 + 4 + 5) / 4);
+            assert_eq!(scaled.pixel(1, 0), (2 + 3 + 6 + 7) / 4);
+            assert_eq!(scaled.pixel(0, 1), (8 + 9 + 12 + 13) / 4);
+            assert_eq!(scaled.pixel(1, 1), (10 + 11 + 14 + 15) / 4);
+        }
+
+        #[test]
+        #[should_panic]
+        fn overflow_x() {
+            let image = FakeImage::new(4, 4);
+            let scaled = image.downscale_2x2();
+            scaled.pixel(2, 0);
+        }
+
+        #[test]
+        #[should_panic]
+        fn overflow_y() {
+            let image = FakeImage::new(4, 4);
+            let scaled = image.downscale_2x2();
+            scaled.pixel(0, 2);
+        }
+    }
+}
 
 mod blocks {
     use itertools::Itertools;
     use crate::image::{Image, Pixel};
 
-    struct SquaredBlock<'a, I: Image> {
+    pub struct SquaredBlock<'a, I: Image> {
         image: &'a I,
         size: u32,
         rel_x: u32,
@@ -62,7 +152,7 @@ mod blocks {
     }
 
 
-    trait IntoSquaredBlocks<'a, I> where I: Image + 'a {
+    pub trait IntoSquaredBlocks<'a, I> where I: Image + 'a {
         fn squared_blocks(&'a self, size: u32) -> impl Iterator<Item=SquaredBlock<'a, I>>;
     }
 
@@ -89,6 +179,7 @@ mod blocks {
     #[cfg(test)]
     mod tests {
         use super::*;
+        use crate::testutils::FakeImage;
 
         #[test]
         #[should_panic]
@@ -139,25 +230,25 @@ mod blocks {
             let blocks = image.squared_blocks(2).collect::<Vec<_>>();
             assert_eq!(blocks.len(), 4);
 
-            assert_eq!(blocks[0].pixel(0,0), image.pixel(0,0));
-            assert_eq!(blocks[0].pixel(1,0), image.pixel(1,0));
-            assert_eq!(blocks[0].pixel(0,1), image.pixel(0,1));
-            assert_eq!(blocks[0].pixel(1,1), image.pixel(1,1));
+            assert_eq!(blocks[0].pixel(0, 0), image.pixel(0, 0));
+            assert_eq!(blocks[0].pixel(1, 0), image.pixel(1, 0));
+            assert_eq!(blocks[0].pixel(0, 1), image.pixel(0, 1));
+            assert_eq!(blocks[0].pixel(1, 1), image.pixel(1, 1));
 
-            assert_eq!(blocks[1].pixel(0,0), image.pixel(2,0));
-            assert_eq!(blocks[1].pixel(1,0), image.pixel(3,0));
-            assert_eq!(blocks[1].pixel(0,1), image.pixel(2,1));
-            assert_eq!(blocks[1].pixel(1,1), image.pixel(3,1));
+            assert_eq!(blocks[1].pixel(0, 0), image.pixel(2, 0));
+            assert_eq!(blocks[1].pixel(1, 0), image.pixel(3, 0));
+            assert_eq!(blocks[1].pixel(0, 1), image.pixel(2, 1));
+            assert_eq!(blocks[1].pixel(1, 1), image.pixel(3, 1));
 
-            assert_eq!(blocks[2].pixel(0,0), image.pixel(0,2));
-            assert_eq!(blocks[2].pixel(1,0), image.pixel(1,2));
-            assert_eq!(blocks[2].pixel(0,1), image.pixel(0,3));
-            assert_eq!(blocks[2].pixel(1,1), image.pixel(1,3));
+            assert_eq!(blocks[2].pixel(0, 0), image.pixel(0, 2));
+            assert_eq!(blocks[2].pixel(1, 0), image.pixel(1, 2));
+            assert_eq!(blocks[2].pixel(0, 1), image.pixel(0, 3));
+            assert_eq!(blocks[2].pixel(1, 1), image.pixel(1, 3));
 
-            assert_eq!(blocks[3].pixel(0,0), image.pixel(2,2));
-            assert_eq!(blocks[3].pixel(1,0), image.pixel(3,2));
-            assert_eq!(blocks[3].pixel(0,1), image.pixel(2,3));
-            assert_eq!(blocks[3].pixel(1,1), image.pixel(3,3));
+            assert_eq!(blocks[3].pixel(0, 0), image.pixel(2, 2));
+            assert_eq!(blocks[3].pixel(1, 0), image.pixel(3, 2));
+            assert_eq!(blocks[3].pixel(0, 1), image.pixel(2, 3));
+            assert_eq!(blocks[3].pixel(1, 1), image.pixel(3, 3));
         }
 
         #[test]
@@ -166,7 +257,7 @@ mod blocks {
             let image = FakeImage::new(4, 4);
             let blocks = image.squared_blocks(2).collect::<Vec<_>>();
             assert_eq!(blocks.len(), 4);
-            blocks[0].pixel(2,0);
+            blocks[0].pixel(2, 0);
         }
 
         #[test]
@@ -175,37 +266,7 @@ mod blocks {
             let image = FakeImage::new(4, 4);
             let blocks = image.squared_blocks(2).collect::<Vec<_>>();
             assert_eq!(blocks.len(), 4);
-            blocks[0].pixel(0,2);
-        }
-
-        struct FakeImage {
-            width: u32,
-            height: u32,
-        }
-
-        impl Image for FakeImage {
-            fn get_width(&self) -> u32 {
-                self.width
-            }
-
-            fn get_height(&self) -> u32 {
-                self.height
-            }
-
-            fn pixel(&self, x: u32, y: u32) -> Pixel {
-                assert!(x < self.width);
-                assert!(y < self.height);
-                (y * self.width + x) as u8
-            }
-        }
-
-        impl FakeImage {
-            fn new(width: u32, height: u32) -> Self {
-                Self {
-                    width,
-                    height,
-                }
-            }
+            blocks[0].pixel(0, 2);
         }
     }
 }

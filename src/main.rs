@@ -1,6 +1,6 @@
 mod quadtree;
 mod image;
-mod metrics;
+mod testutils;
 
 fn main() {
     println!("Hello, world!");
