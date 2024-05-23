@@ -5,3 +5,5 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.13.0"
+image = "0.25.1"
+show-image = {version = "0.14.0", features = ["image"]}

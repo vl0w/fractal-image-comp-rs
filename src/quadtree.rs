@@ -1,25 +1,13 @@
-use crate::image::Image;
+use image::DynamicImage;
+use crate::image::{Image, IntoOwnedImage};
 use crate::quadtree::blocks::IntoSquaredBlocks;
 use crate::quadtree::scaled::IntoLazily2x2Scaled;
+use crate::readwrite::AsDynamicImage;
 
-struct Options {
-    min_quadtree_depth: u8,
-    max_quadtree_depth: u8,
-}
-
-impl Options {
-    fn new(min_quadtree_depth: u8, max_quadtree_depth: u8) -> Self {
-        assert!(min_quadtree_depth <= max_quadtree_depth);
-        Self {
-            min_quadtree_depth,
-            max_quadtree_depth,
-        }
-    }
-}
-
-fn compress<I: Image>(image: I, options: Options) {
+pub fn compress<'a, I: Image + 'a>(image: I) -> impl Image {
     let range_blocks = image.squared_blocks(4);
-    let _ = range_blocks.map(|b| b.downscale_2x2());
+    // let _ = range_blocks.map(|b| b.downscale_2x2());
+    image.downscale_2x2().into_owned()
 }
 
 
