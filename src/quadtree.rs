@@ -1,9 +1,9 @@
-use crate::image::{Image, IntoOwnedImage};
+use crate::image::{Image, IntoOwnedImage, IterablePixels};
 use crate::quadtree::blocks::IntoSquaredBlocks;
 use crate::quadtree::scaled::IntoLazily2x2Scaled;
 use crate::readwrite::AsDynamicImage;
 
-pub fn compress<'a, I: Image + 'a>(image: I) -> impl Image {
+pub fn compress<'a, I: Image + 'a>(image: I) -> impl Image + AsDynamicImage + IterablePixels {
     let range_blocks = image.squared_blocks(4);
     // let _ = range_blocks.map(|b| b.downscale_2x2());
     image.downscale_2x2().into_owned()
@@ -11,7 +11,8 @@ pub fn compress<'a, I: Image + 'a>(image: I) -> impl Image {
 
 
 mod scaled {
-    use crate::image::{Image, Pixel};
+    use crate::image::{Image, IterablePixels, Pixel};
+    use crate::image::iter::PixelIterator;
 
     pub struct Lazily2x2Scaled<'a, I: Image> {
         image: &'a I,
@@ -32,6 +33,12 @@ mod scaled {
                 self.image.pixel(2 * x, 2 * y + 1) as u32 +
                 self.image.pixel(2 * x + 1, 2 * y + 1) as u32;
             (0.25 * sum as f64) as Pixel
+        }
+    }
+
+    impl<'a, I: Image> IterablePixels for Lazily2x2Scaled<'a, I> {
+        fn pixels(&self) -> impl Iterator<Item=Pixel> {
+            PixelIterator::new(self)
         }
     }
 
@@ -98,7 +105,8 @@ mod scaled {
 mod blocks {
     use itertools::Itertools;
 
-    use crate::image::{Image, Pixel};
+    use crate::image::{Image, IterablePixels, Pixel};
+    use crate::image::iter::PixelIterator;
 
     pub struct SquaredBlock<'a, I: Image> {
         image: &'a I,
@@ -136,6 +144,12 @@ mod blocks {
             assert!(x < self.size);
             assert!(y < self.size);
             self.image.pixel(self.rel_x + x, self.rel_y + y)
+        }
+    }
+
+    impl<'a, I: Image> IterablePixels for SquaredBlock<'a, I> {
+        fn pixels(&self) -> impl Iterator<Item=Pixel> {
+            PixelIterator::new(self)
         }
     }
 

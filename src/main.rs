@@ -4,7 +4,7 @@ use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::FmtSpan;
 
 use crate::image::Image;
-use crate::readwrite::{AsDynamicImage, SafeableImage, SquaredGrayscaleImage};
+use crate::readwrite::{SafeableImage, SquaredGrayscaleImage};
 
 mod quadtree;
 mod image;

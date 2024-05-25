@@ -1,8 +1,8 @@
 use std::cmp::min;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use image::{DynamicImage, GrayImage, ImageFormat};
 use image::imageops::FilterType;
-use tracing::{instrument, trace};
+use tracing::debug;
 use crate::image::{Image, IterablePixels, Pixel};
 
 #[derive(Debug)]
@@ -48,12 +48,11 @@ impl Image for SquaredGrayscaleImage {
     }
 }
 
-// TODO: Do
-// impl IterablePixels for SquaredGrayscaleImage {
-//     fn pixels(&self) -> impl Iterator<Item=&Pixel> {
-//         self.pixels.iter()
-//     }
-// }
+impl IterablePixels for SquaredGrayscaleImage {
+    fn pixels(&self) -> impl Iterator<Item=Pixel> {
+        self.pixels.iter().cloned()
+    }
+}
 
 pub trait AsDynamicImage {
     fn as_dynamic_image(&self) -> DynamicImage;
@@ -61,8 +60,8 @@ pub trait AsDynamicImage {
 
 impl<T> AsDynamicImage for T where T: Image + IterablePixels {
     fn as_dynamic_image(&self) -> DynamicImage {
+        debug!("Converting image to dynamic image");
         let pixels: Vec<_> = self.pixels().collect();
-        print!("{}", pixels.len());
         let image = GrayImage::from_raw(self.get_width(), self.get_height(), pixels).expect("Unable to convert to GrayImage");
         DynamicImage::ImageLuma8(image)
     }

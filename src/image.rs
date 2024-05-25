@@ -1,3 +1,5 @@
+use crate::image::iter::PixelIterator;
+
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
 
@@ -17,16 +19,6 @@ pub struct OwnedImage {
     data: Vec<u8>,
 }
 
-impl OwnedImage {
-    fn new(width: u32, height: u32, data: Vec<u8>) -> Self {
-        OwnedImage {
-            width,
-            height,
-            data,
-        }
-    }
-}
-
 impl Image for OwnedImage {
     fn get_width(&self) -> u32 {
         self.width
@@ -44,22 +36,28 @@ impl Image for OwnedImage {
     }
 }
 
+impl IterablePixels for OwnedImage {
+    fn pixels(&self) -> impl Iterator<Item=Pixel> {
+        PixelIterator::new(self)
+    }
+}
+
 pub trait IntoOwnedImage<'a, T: Image> {
     fn into_owned(self) -> OwnedImage;
 }
 
-impl<'a, T> IntoOwnedImage<'a, T> for T where T: Image + 'a {
+impl<'a, T> IntoOwnedImage<'a, T> for T where T: Image + IterablePixels + 'a {
     fn into_owned(self) -> OwnedImage {
         OwnedImage {
             width: self.get_width(),
             height: self.get_height(),
-            data: self.pixels().collect()
+            data: self.pixels().collect(),
         }
     }
 }
 
 pub mod iter {
-    use crate::image::{Image, IterablePixels, Pixel};
+    use crate::image::{Image, Pixel};
 
     enum Next {
         Done,
@@ -94,7 +92,7 @@ pub mod iter {
     }
 
     impl<'a, T: Image> PixelIterator<'a, T> {
-        fn new(image: &'a T) -> Self {
+        pub fn new(image: &'a T) -> Self {
             PixelIterator { image, next: Next::Xy(0, 0) }
         }
     }
@@ -109,12 +107,6 @@ pub mod iter {
                     Some(self.image.pixel(x, y))
                 }
             }
-        }
-    }
-
-    impl<T> IterablePixels for T where T: Image {
-        fn pixels(&self) -> impl Iterator<Item=Pixel> {
-            PixelIterator::new(self)
         }
     }
 }

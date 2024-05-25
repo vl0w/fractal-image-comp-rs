@@ -1,4 +1,5 @@
-use crate::image::{Image, Pixel};
+#[cfg(test)]
+use crate::image::Pixel;
 
 #[cfg(test)]
 pub struct FakeImage {
