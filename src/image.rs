@@ -73,12 +73,12 @@ pub mod iter {
                 Next::Xy(x, y) => {
                     let mut nx = x + 1;
                     let mut ny = *y;
-                    if (nx >= width) {
+                    if nx >= width {
                         nx = 0;
                         ny += 1;
                     }
 
-                    if (ny >= height) {
+                    if ny >= height {
                         Next::Done
                     } else {
                         Next::Xy(nx, ny)

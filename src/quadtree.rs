@@ -1,4 +1,3 @@
-use image::DynamicImage;
 use crate::image::{Image, IntoOwnedImage};
 use crate::quadtree::blocks::IntoSquaredBlocks;
 use crate::quadtree::scaled::IntoLazily2x2Scaled;
@@ -98,6 +97,7 @@ mod scaled {
 
 mod blocks {
     use itertools::Itertools;
+
     use crate::image::{Image, Pixel};
 
     pub struct SquaredBlock<'a, I: Image> {
@@ -166,8 +166,9 @@ mod blocks {
 
     #[cfg(test)]
     mod tests {
-        use super::*;
         use crate::testutils::FakeImage;
+
+        use super::*;
 
         #[test]
         #[should_panic]
