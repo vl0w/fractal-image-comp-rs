@@ -27,10 +27,10 @@ mod scaled {
         }
 
         fn pixel(&self, x: u32, y: u32) -> Pixel {
-            let sum = self.image.pixel(2 * x, 2 * y) +
-                self.image.pixel(2 * x + 1, 2 * y) +
-                self.image.pixel(2 * x, 2 * y + 1) +
-                self.image.pixel(2 * x + 1, 2 * y + 1);
+            let sum = self.image.pixel(2 * x, 2 * y) as u32 +
+                self.image.pixel(2 * x + 1, 2 * y) as u32 +
+                self.image.pixel(2 * x, 2 * y + 1) as u32 +
+                self.image.pixel(2 * x + 1, 2 * y + 1) as u32;
             (0.25 * sum as f64) as Pixel
         }
     }
