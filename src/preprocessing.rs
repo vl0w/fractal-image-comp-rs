@@ -3,7 +3,8 @@ use std::path::Path;
 use image::{DynamicImage, GrayImage, ImageFormat};
 use image::imageops::FilterType;
 use tracing::debug;
-use crate::image::{Image, IterablePixels, Pixel};
+use crate::image::{Coords, Image, IterablePixels, Pixel};
+use crate::image::iter::PixelIterator;
 
 #[derive(Debug)]
 pub struct SquaredGrayscaleImage {
@@ -53,8 +54,8 @@ impl Image for SquaredGrayscaleImage {
 }
 
 impl IterablePixels for SquaredGrayscaleImage {
-    fn pixels(&self) -> impl Iterator<Item=Pixel> {
-        self.pixels.iter().cloned()
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+        PixelIterator::new(self)
     }
 }
 

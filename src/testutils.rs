@@ -1,4 +1,8 @@
 #[cfg(test)]
+use std::rc::Rc;
+#[cfg(test)]
+use crate::image::Image;
+#[cfg(test)]
 use crate::image::Pixel;
 
 #[cfg(test)]
@@ -26,10 +30,14 @@ impl Image for FakeImage {
 
 #[cfg(test)]
 impl FakeImage {
-    pub fn new(width: u32, height: u32) -> Self {
-        Self {
+    pub fn new(width: u32, height: u32) -> Rc<Self> {
+        Rc::new(Self {
             width,
             height,
-        }
+        })
+    }
+
+    pub fn squared(size: u32) -> Rc<Self> {
+        Self::new(size, size)
     }
 }

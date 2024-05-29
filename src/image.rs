@@ -1,7 +1,38 @@
-use crate::image::iter::PixelIterator;
+use std::ops::Add;
+use derive_more::Display;
+
+pub mod owned;
+pub mod downscale;
+pub mod block;
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
+
+/// Represents the coordinates of a pixel
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Display)]
+#[display(fmt = "(x={}, y={})", x, y)]
+pub struct Coords {
+    pub x: u32,
+    pub y: u32,
+}
+
+#[macro_export]
+macro_rules! coords {
+    ($x: expr, $y: expr) => {
+        Coords { x: $x, y: $y }
+    };
+}
+
+impl Add<Coords> for Coords {
+    type Output = Coords;
+
+    fn add(self, rhs: Coords) -> Self::Output {
+        Coords {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+        }
+    }
+}
 
 pub trait Image {
     fn get_width(&self) -> u32;
@@ -10,55 +41,21 @@ pub trait Image {
 }
 
 pub trait IterablePixels {
-    fn pixels(&self) -> impl Iterator<Item=Pixel>;
-}
-
-pub struct OwnedImage {
-    width: u32,
-    height: u32,
-    data: Vec<u8>,
-}
-
-impl Image for OwnedImage {
-    fn get_width(&self) -> u32 {
-        self.width
-    }
-
-    fn get_height(&self) -> u32 {
-        self.height
-    }
-
-    fn pixel(&self, x: u32, y: u32) -> Pixel {
-        assert!(x < self.width);
-        assert!(y < self.height);
-        let idx = (y * self.width + x) as usize;
-        self.data[idx]
-    }
-}
-
-impl IterablePixels for OwnedImage {
     fn pixels(&self) -> impl Iterator<Item=Pixel> {
-        PixelIterator::new(self)
+        self.pixels_enumerated().map(|(pixel, _)| pixel)
     }
+
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)>;
 }
 
-pub trait IntoOwnedImage<'a, T: Image> {
-    fn into_owned(self) -> OwnedImage;
-}
-
-impl<'a, T> IntoOwnedImage<'a, T> for T where T: Image + IterablePixels + 'a {
-    fn into_owned(self) -> OwnedImage {
-        OwnedImage {
-            width: self.get_width(),
-            height: self.get_height(),
-            data: self.pixels().collect(),
-        }
-    }
+pub trait MutableImage {
+    fn set_pixel(&mut self, x: u32, y: u32, value: Pixel);
 }
 
 pub mod iter {
-    use crate::image::{Image, Pixel};
+    use crate::image::{Coords, Image, Pixel};
 
+    #[derive(Copy, Clone)]
     enum Next {
         Done,
         Xy(u32, u32),
@@ -86,6 +83,7 @@ pub mod iter {
         }
     }
 
+    #[derive(Copy, Clone)]
     pub struct PixelIterator<'a, T: Image + 'a> {
         image: &'a T,
         next: Next,
@@ -98,15 +96,25 @@ pub mod iter {
     }
 
     impl<'a, T: Image> Iterator for PixelIterator<'a, T> {
-        type Item = Pixel;
+        type Item = (Pixel, Coords);
         fn next(&mut self) -> Option<Self::Item> {
             match self.next {
                 Next::Done => None,
                 Next::Xy(x, y) => {
                     self.next = self.next.next_index(self.image.get_width(), self.image.get_height());
-                    Some(self.image.pixel(x, y))
+                    Some((self.image.pixel(x, y), coords!(x,y)))
                 }
             }
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn add_coords() {
+        assert_eq!(Coords { x: 3, y: 4 } + Coords { x: 5, y: 6 }, Coords { x: 3 + 5, y: 4 + 6 });
     }
 }
