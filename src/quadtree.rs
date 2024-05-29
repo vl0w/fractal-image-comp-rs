@@ -1,12 +1,17 @@
-use tracing::debug;
+use tracing::{debug, instrument};
 use crate::image::{Image, IntoOwnedImage, IterablePixels};
 use crate::quadtree::blocks::IntoSquaredBlocks;
 use crate::quadtree::scaled::IntoLazily2x2Scaled;
 use crate::readwrite::AsDynamicImage;
 
-pub fn compress<'a, I: Image + 'a>(image: I) -> impl Image + AsDynamicImage + IterablePixels {
-    let range_blocks = image.squared_blocks(4);
-    let _ = range_blocks.iter().map(|b| b.downscale_2x2());
+#[instrument(level = "debug", skip(image))]
+pub fn compress<I: Image>(image: I) -> impl Image + AsDynamicImage + IterablePixels {
+    let domain_blocks = image.squared_blocks(32);
+    let range_blocks = image.squared_blocks(16);
+
+    debug!("Domain blocks: {} with size {}x{}", domain_blocks.len(), 32, 32);
+    debug!("Range blocks: {} with size {}x{}", range_blocks.len(), 16, 16);
+
     image.downscale_2x2().into_owned()
 }
 
@@ -104,15 +109,25 @@ mod scaled {
 }
 
 mod blocks {
+    use derive_more::Display;
     use itertools::Itertools;
 
     use crate::image::{Image, IterablePixels, Pixel};
     use crate::image::iter::PixelIterator;
 
+
+    #[derive(Display)]
+    #[display(fmt = "Block² {} {} {}", size, rel_x, rel_y)]
     pub struct SquaredBlock<'a, I: Image> {
         image: &'a I,
+
+        #[display(fmt = "{}x{}", _0)]
         size: u32,
+
+        #[display(fmt = "Δx={}", _0)]
         rel_x: u32,
+
+        #[display(fmt = "Δy={}", _0)]
         rel_y: u32,
     }
 
@@ -175,7 +190,7 @@ mod blocks {
                     rel_x: size * y,
                     image: self,
                 }
-            }).collect::<Vec<_>>()
+            }).collect()
         }
     }
 

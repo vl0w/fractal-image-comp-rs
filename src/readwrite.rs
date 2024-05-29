@@ -15,6 +15,10 @@ impl SquaredGrayscaleImage {
     pub fn read_from(path: &Path) -> Self {
         let image = image::open(path).expect(format!("Could not load image: {:?}", path).as_str());
         let size = min(image.width(), image.height());
+
+        // Ensure size is a multiple of 2
+        let size = (size.ilog2() as f32).exp2() as u32;
+
         let image = image.resize(size, size, FilterType::Gaussian);
         let image = image.to_rgb8();
         let grayscale = image.pixels().map(|pixel| {
