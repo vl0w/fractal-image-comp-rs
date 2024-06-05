@@ -7,8 +7,18 @@ use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::model::{Block, Compressed, Transformation};
 use crate::image::downscale::IntoDownscaled;
 
+#[derive(Copy, Clone, Debug)]
+pub struct Options {
+    pub error_threshold: ErrorThreshold,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum ErrorThreshold {
+    RmsAnyLowerThan(f64)
+}
+
 #[instrument(level = "debug", skip(image))]
-pub fn compress<I: Image>(image: I) -> Compressed {
+pub fn compress<I: Image>(image: I, options: Options) -> Compressed {
     let image_height = image.get_height();
     let image_width = image.get_width();
     assert_eq!(image_height, image_width, "Only square sized images supported");
@@ -30,7 +40,7 @@ pub fn compress<I: Image>(image: I) -> Compressed {
 
     while let Some(rb) = queue.pop_front() {
         debug!("Finding transformation for range block {} (remaining: {})", rb, queue.len());
-        match Transformation::find(image.clone(), &rb) {
+        match Transformation::find(image.clone(), &rb, options.error_threshold) {
             Some(transformation) => {
                 debug!("For range block {}, found best matching domain block", rb);
                 transformations.push(transformation)
@@ -52,7 +62,7 @@ pub fn compress<I: Image>(image: I) -> Compressed {
 }
 
 impl Transformation {
-    fn find<I: Image>(image: Rc<I>, range_block: &SquaredBlock<I>) -> Option<Self> {
+    fn find<I: Image>(image: Rc<I>, range_block: &SquaredBlock<I>, error_threshold: ErrorThreshold) -> Option<Self> {
         let range_block_size = range_block.size;
         let domain_block_size = 2 * range_block_size;
 
@@ -63,7 +73,9 @@ impl Transformation {
             debug!("Mapping: {:?}",mapping);
             (db, mapping)
         })
-            .filter(|(_, mapping)| mapping.error < 50_f64)
+            .filter(|(_, mapping)| match error_threshold {
+                ErrorThreshold::RmsAnyLowerThan(acceptable_error) => mapping.error < acceptable_error
+            })
             .take(1)
             .next();
 

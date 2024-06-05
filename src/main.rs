@@ -2,6 +2,7 @@ use std::path::Path;
 use tracing::info;
 use tracing_subscriber::EnvFilter;
 use tracing_subscriber::fmt::format::FmtSpan;
+use crate::compress::quadtree::ErrorThreshold;
 
 use crate::image::Image;
 use crate::preprocessing::{SafeableImage, SquaredGrayscaleImage};
@@ -24,7 +25,7 @@ fn main() {
     info!("Image width: {}", image.get_width());
     info!("Image height: {}", image.get_height());
     let size = image.get_width();
-    let compressed = compress::quadtree::compress(image);
+    let compressed = compress::quadtree::compress(image, compress::quadtree::Options { error_threshold: ErrorThreshold::RmsAnyLowerThan(10_f64) });
     let size_of_file = compressed.persist_as_json(Path::new("transformations.json")).expect("Could not save compression");
     info!("Size of compression: {}kB", size_of_file as f64 / 1024.0);
     let image = decompress::decompress(size, compressed);
