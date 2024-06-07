@@ -1,5 +1,5 @@
-use serde::Serialize;
 use crate::model::Compressed;
+use serde::Serialize;
 
 pub fn serialize(compressed: &Compressed) -> Vec<u8> {
     let contents = Contents::from(compressed.clone());
@@ -19,11 +19,13 @@ impl From<Compressed> for Contents {
         let image_size = transformations[0].domain.image_size;
         Self {
             w: image_size,
-            m: transformations.into_iter().map(|t| (Block::from(t.domain), Block::from(t.range))).collect(),
+            m: transformations
+                .into_iter()
+                .map(|t| (Block::from(t.domain), Block::from(t.range)))
+                .collect(),
         }
     }
 }
-
 
 #[derive(Serialize)]
 struct Block(u32, u32, u32);

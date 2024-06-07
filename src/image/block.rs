@@ -3,14 +3,20 @@ use std::rc::Rc;
 use derive_more::Display;
 use itertools::Itertools;
 
-use crate::image::{Coords, Image, IterablePixels, Pixel};
 use crate::image::iter::PixelIterator;
+use crate::image::{Coords, Image, IterablePixels, Pixel};
 
-pub trait IntoSquaredBlocks<I> where I: Image {
+pub trait IntoSquaredBlocks<I>
+where
+    I: Image,
+{
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>>;
 }
 
-impl<I> IntoSquaredBlocks<I> for Rc<I> where I: Image {
+impl<I> IntoSquaredBlocks<I> for Rc<I>
+where
+    I: Image,
+{
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>> {
         assert_eq!(self.get_width() % size, 0);
         assert_eq!(self.get_height() % size, 0);
@@ -19,16 +25,17 @@ impl<I> IntoSquaredBlocks<I> for Rc<I> where I: Image {
         let x_block = 0..self.get_width() / size;
         let y_block = 0..self.get_height() / size;
 
-        x_block.cartesian_product(y_block).map(move |(x, y)| {
-            SquaredBlock {
+        x_block
+            .cartesian_product(y_block)
+            .map(move |(x, y)| SquaredBlock {
                 size,
                 origin: Coords {
                     x: size * y,
                     y: size * x,
                 },
                 image: self.clone(),
-            }
-        }).collect()
+            })
+            .collect()
     }
 }
 
@@ -71,7 +78,7 @@ impl<I: Image> Image for SquaredBlock<I> {
 }
 
 impl<I: Image> IterablePixels for SquaredBlock<I> {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }
@@ -178,9 +185,14 @@ mod tests {
         // 12 13 14 15
 
         let image = FakeImage::squared(4);
-        let blocks: Vec<Rc<SquaredBlock<FakeImage>>> = image.squared_blocks(4).into_iter().map(Rc::new).collect();
+        let blocks: Vec<Rc<SquaredBlock<FakeImage>>> =
+            image.squared_blocks(4).into_iter().map(Rc::new).collect();
         assert_eq!(blocks.len(), 1);
-        let blocks: Vec<Rc<SquaredBlock<SquaredBlock<FakeImage>>>> = blocks[0].squared_blocks(2).into_iter().map(Rc::new).collect();
+        let blocks: Vec<Rc<SquaredBlock<SquaredBlock<FakeImage>>>> = blocks[0]
+            .squared_blocks(2)
+            .into_iter()
+            .map(Rc::new)
+            .collect();
         assert_eq!(blocks.len(), 4);
         assert_eq!(blocks[0].pixel(0, 0), 0);
         assert_eq!(blocks[0].pixel(1, 0), 1);
@@ -219,7 +231,8 @@ mod tests {
         // 56 57 58 59 60 61 62 63
 
         let image = FakeImage::squared(8);
-        let blocks: Vec<Rc<SquaredBlock<FakeImage>>> = image.squared_blocks(4).into_iter().map(Rc::new).collect();
+        let blocks: Vec<Rc<SquaredBlock<FakeImage>>> =
+            image.squared_blocks(4).into_iter().map(Rc::new).collect();
         let mut inner_blocks = blocks[1].squared_blocks(2).into_iter();
         let third_block = inner_blocks.next().unwrap();
         let third_block = inner_blocks.next().unwrap();

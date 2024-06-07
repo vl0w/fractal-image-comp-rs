@@ -1,16 +1,19 @@
-use crate::image::{Coords, Image, IterablePixels, Pixel};
 use crate::image::iter::PixelIterator;
+use crate::image::{Coords, Image, IterablePixels, Pixel};
 
-
-pub trait IntoDownscaled<'a, I> where I: Image + 'a {
+pub trait IntoDownscaled<'a, I>
+where
+    I: Image + 'a,
+{
     fn downscale_2x2(&'a self) -> Downscaled2x2<'a, I>;
 }
 
-impl<'a, I> IntoDownscaled<'a, I> for I where I: Image + 'a {
+impl<'a, I> IntoDownscaled<'a, I> for I
+where
+    I: Image + 'a,
+{
     fn downscale_2x2(&'a self) -> Downscaled2x2<'a, I> {
-        Downscaled2x2 {
-            image: self
-        }
+        Downscaled2x2 { image: self }
     }
 }
 
@@ -34,24 +37,24 @@ impl<'a, I: Image> Image for Downscaled2x2<'a, I> {
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {
-        let sum = self.image.pixel(2 * x, 2 * y) as u32 +
-            self.image.pixel(2 * x + 1, 2 * y) as u32 +
-            self.image.pixel(2 * x, 2 * y + 1) as u32 +
-            self.image.pixel(2 * x + 1, 2 * y + 1) as u32;
+        let sum = self.image.pixel(2 * x, 2 * y) as u32
+            + self.image.pixel(2 * x + 1, 2 * y) as u32
+            + self.image.pixel(2 * x, 2 * y + 1) as u32
+            + self.image.pixel(2 * x + 1, 2 * y + 1) as u32;
         (0.25 * sum as f64) as Pixel
     }
 }
 
 impl<'a, I: Image> IterablePixels for Downscaled2x2<'a, I> {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::testutils::FakeImage;
     use super::*;
+    use crate::testutils::FakeImage;
 
     #[test]
     fn downscaled_size() {
@@ -93,4 +96,3 @@ mod tests {
         scaled.pixel(0, 2);
     }
 }
-

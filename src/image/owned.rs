@@ -1,6 +1,6 @@
-use rand::{Rng, thread_rng};
+use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, MutableImage, Pixel};
-use crate::image::iter::{PixelIterator};
+use rand::{thread_rng, Rng};
 
 #[derive(Clone)]
 pub struct OwnedImage {
@@ -24,7 +24,6 @@ impl OwnedImage {
         }
     }
 }
-
 
 impl Image for OwnedImage {
     fn get_width(&self) -> u32 {
@@ -53,7 +52,7 @@ impl MutableImage for OwnedImage {
 }
 
 impl IterablePixels for OwnedImage {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }

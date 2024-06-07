@@ -1,10 +1,10 @@
+use crate::image::iter::PixelIterator;
+use crate::image::{Coords, Image, IterablePixels, Pixel};
+use image::imageops::FilterType;
+use image::{DynamicImage, GrayImage, ImageFormat};
 use std::cmp::min;
 use std::path::Path;
-use image::{DynamicImage, GrayImage, ImageFormat};
-use image::imageops::FilterType;
 use tracing::debug;
-use crate::image::{Coords, Image, IterablePixels, Pixel};
-use crate::image::iter::PixelIterator;
 
 #[derive(Debug)]
 pub struct SquaredGrayscaleImage {
@@ -22,14 +22,17 @@ impl SquaredGrayscaleImage {
 
         let image = image.resize(size, size, FilterType::Gaussian);
         let image = image.to_rgb8();
-        let grayscale = image.pixels().map(|pixel| {
-            let red = pixel.0[0];
-            let green = pixel.0[1];
-            let blue = pixel.0[2];
-            let ntsc_grayscale = 299 * red as u32 + 587 * green as u32 + 114 * blue as u32;
-            let ntsc = ntsc_grayscale / 1000;
-            ntsc as u8
-        }).collect::<Vec<_>>();
+        let grayscale = image
+            .pixels()
+            .map(|pixel| {
+                let red = pixel.0[0];
+                let green = pixel.0[1];
+                let blue = pixel.0[2];
+                let ntsc_grayscale = 299 * red as u32 + 587 * green as u32 + 114 * blue as u32;
+                let ntsc = ntsc_grayscale / 1000;
+                ntsc as u8
+            })
+            .collect::<Vec<_>>();
 
         Self {
             pixels: grayscale,
@@ -54,7 +57,7 @@ impl Image for SquaredGrayscaleImage {
 }
 
 impl IterablePixels for SquaredGrayscaleImage {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }
@@ -63,11 +66,15 @@ pub trait AsDynamicImage {
     fn as_dynamic_image(&self) -> DynamicImage;
 }
 
-impl<T> AsDynamicImage for T where T: Image + IterablePixels {
+impl<T> AsDynamicImage for T
+where
+    T: Image + IterablePixels,
+{
     fn as_dynamic_image(&self) -> DynamicImage {
         debug!("Converting image to dynamic image");
         let pixels: Vec<_> = self.pixels().collect();
-        let image = GrayImage::from_raw(self.get_width(), self.get_height(), pixels).expect("Unable to convert to GrayImage");
+        let image = GrayImage::from_raw(self.get_width(), self.get_height(), pixels)
+            .expect("Unable to convert to GrayImage");
         DynamicImage::ImageLuma8(image)
     }
 }
@@ -80,9 +87,14 @@ pub trait SafeableImage {
     }
 }
 
-impl<T> SafeableImage for T where T: AsDynamicImage {
+impl<T> SafeableImage for T
+where
+    T: AsDynamicImage,
+{
     fn save_image(&self, path: &Path, format: ImageFormat) {
         let image = self.as_dynamic_image();
-        image.save_with_format(path, format).expect(format!("Could not save image to {:?}", path).as_str());
+        image
+            .save_with_format(path, format)
+            .expect(format!("Could not save image to {:?}", path).as_str());
     }
 }

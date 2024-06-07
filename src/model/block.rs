@@ -11,11 +11,13 @@ pub struct Block {
 }
 
 impl Block {
-    pub fn indices(&self) -> impl Iterator<Item=(usize, Coords)> {
+    pub fn indices(&self) -> impl Iterator<Item = (usize, Coords)> {
         let mut indices: Vec<(usize, Coords)> = Vec::with_capacity(self.block_size.pow(2) as usize);
         for i in 0..self.block_size {
             for j in 0..self.block_size {
-                let index = (self.origin.y * self.image_size + self.origin.x + self.image_size * i + j) as usize;
+                let index =
+                    (self.origin.y * self.image_size + self.origin.x + self.image_size * i + j)
+                        as usize;
                 indices.push((index, coords!(self.origin.x + j, self.origin.y + i)))
             }
         }
@@ -26,8 +28,8 @@ impl Block {
 
 #[cfg(test)]
 mod tests {
-    use crate::coords;
     use super::*;
+    use crate::coords;
 
     #[test]
     fn get_indices() {
@@ -48,10 +50,19 @@ mod tests {
             origin: coords!(2, 3),
         };
 
-        assert_eq!(vec![
-            (32, coords!(2, 3)), (33, coords!(3, 3)), (34, coords!(4, 3)),
-            (42, coords!(2, 4)), (43, coords!(3, 4)), (44, coords!(4, 4)),
-            (52, coords!(2, 5)), (53, coords!(3, 5)), (54, coords!(4, 5))],
-                   block.indices().collect::<Vec<_>>());
+        assert_eq!(
+            vec![
+                (32, coords!(2, 3)),
+                (33, coords!(3, 3)),
+                (34, coords!(4, 3)),
+                (42, coords!(2, 4)),
+                (43, coords!(3, 4)),
+                (44, coords!(4, 4)),
+                (52, coords!(2, 5)),
+                (53, coords!(3, 5)),
+                (54, coords!(4, 5))
+            ],
+            block.indices().collect::<Vec<_>>()
+        );
     }
 }

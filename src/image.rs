@@ -1,9 +1,9 @@
-use std::ops::Add;
 use derive_more::Display;
+use std::ops::Add;
 
-pub mod owned;
-pub mod downscale;
 pub mod block;
+pub mod downscale;
+pub mod owned;
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
@@ -41,11 +41,11 @@ pub trait Image {
 }
 
 pub trait IterablePixels {
-    fn pixels(&self) -> impl Iterator<Item=Pixel> {
+    fn pixels(&self) -> impl Iterator<Item = Pixel> {
         self.pixels_enumerated().map(|(pixel, _)| pixel)
     }
 
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)>;
+    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)>;
 }
 
 pub trait MutableImage {
@@ -91,7 +91,10 @@ pub mod iter {
 
     impl<'a, T: Image> PixelIterator<'a, T> {
         pub fn new(image: &'a T) -> Self {
-            PixelIterator { image, next: Next::Xy(0, 0) }
+            PixelIterator {
+                image,
+                next: Next::Xy(0, 0),
+            }
         }
     }
 
@@ -101,8 +104,10 @@ pub mod iter {
             match self.next {
                 Next::Done => None,
                 Next::Xy(x, y) => {
-                    self.next = self.next.next_index(self.image.get_width(), self.image.get_height());
-                    Some((self.image.pixel(x, y), coords!(x,y)))
+                    self.next = self
+                        .next
+                        .next_index(self.image.get_width(), self.image.get_height());
+                    Some((self.image.pixel(x, y), coords!(x, y)))
                 }
             }
         }
@@ -115,6 +120,9 @@ mod tests {
 
     #[test]
     fn add_coords() {
-        assert_eq!(Coords { x: 3, y: 4 } + Coords { x: 5, y: 6 }, Coords { x: 3 + 5, y: 4 + 6 });
+        assert_eq!(
+            Coords { x: 3, y: 4 } + Coords { x: 5, y: 6 },
+            Coords { x: 3 + 5, y: 4 + 6 }
+        );
     }
 }

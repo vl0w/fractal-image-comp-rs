@@ -1,13 +1,13 @@
-use std::path::Path;
-use std::rc::Rc;
-use image::ImageFormat;
-use tracing::instrument;
 use crate::image::block::SquaredBlock;
 use crate::image::downscale::IntoDownscaled;
-use crate::image::{IterablePixels, MutableImage};
 use crate::image::owned::OwnedImage;
+use crate::image::{IterablePixels, MutableImage};
 use crate::model::{Compressed, Transformation};
 use crate::preprocessing::SafeableImage;
+use image::ImageFormat;
+use std::path::Path;
+use std::rc::Rc;
+use tracing::instrument;
 
 #[instrument(level = "debug", skip(compressed))]
 pub fn decompress(size: u32, compressed: Compressed) -> OwnedImage {

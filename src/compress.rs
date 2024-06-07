@@ -1,5 +1,5 @@
-use tracing::trace;
 use crate::image::{Image, IterablePixels};
+use tracing::trace;
 
 pub mod quadtree;
 
@@ -12,7 +12,10 @@ struct Mapping {
 
 impl Mapping {
     fn compute<A, B>(domain: &A, range: &B) -> Self
-        where A: Image + IterablePixels, B: Image + IterablePixels {
+    where
+        A: Image + IterablePixels,
+        B: Image + IterablePixels,
+    {
         assert_eq!(domain.get_height(), range.get_height());
         assert_eq!(domain.get_width(), range.get_width());
 
@@ -37,17 +40,20 @@ impl Mapping {
         let denominator = n * a_squared_sum - a_sum_squared;
         let s = match denominator {
             0.0 => 0.0,
-            _ => (n * a_times_b_sum - a_sum * b_sum) / denominator
+            _ => (n * a_times_b_sum - a_sum * b_sum) / denominator,
         };
 
         // Compute o (brightness)
         let o = match denominator {
             0.0 => b_sum / n,
-            _ => (b_sum - s * a_sum) / n
+            _ => (b_sum - s * a_sum) / n,
         };
 
         // Squared error
-        let r = (b_squared_sum + s * (s * a_squared_sum - 2.0 * a_times_b_sum + 2.0 * o * a_sum) + o * (n * o - 2.0 * b_sum)) / n;
+        let r = (b_squared_sum
+            + s * (s * a_squared_sum - 2.0 * a_times_b_sum + 2.0 * o * a_sum)
+            + o * (n * o - 2.0 * b_sum))
+            / n;
         let rms_error = r.sqrt();
 
         trace!("saturation = {}", s);
