@@ -8,83 +8,127 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use tracing::{debug, info, instrument};
 
-#[derive(Copy, Clone, Debug)]
-pub struct Options {
-    pub error_threshold: ErrorThreshold,
+pub struct Compressor<I> {
+    image: I,
+    error_threshold: ErrorThreshold,
+    progress_fn: Option<fn(f64)>,
 }
 
-#[derive(Copy, Clone, Debug)]
-pub enum ErrorThreshold {
-    RmsAnyLowerThan(f64),
-}
+impl<I> Compressor<I>
+where
+    I: Image,
+{
+    pub fn builder(image: I) -> Builder<I> {
+        Builder::new(image)
+    }
 
-#[instrument(level = "debug", skip(image))]
-pub fn compress<I: Image>(image: I, options: Options) -> Compressed {
-    let image_height = image.get_height();
-    let image_width = image.get_width();
-    assert_eq!(
-        image_height, image_width,
-        "Only square sized images supported"
-    );
-    info!("Compressing {}x{} image", image_height, image_width);
-    let image = Rc::new(image);
-
-    let mut transformations: Vec<Transformation> = Vec::new();
-
-    let domain_block_size: u32 = image.get_height();
-    let range_block_size: u32 = (image.get_height() as f64 / 2.0) as u32;
-
-    let domain_blocks = image.squared_blocks(domain_block_size);
-    let range_blocks = image
-        .squared_blocks(range_block_size)
-        .into_iter()
-        .map(Rc::new)
-        .collect::<Vec<Rc<_>>>();
-
-    debug!(
-        "Domain blocks: {} with size {}x{}",
-        domain_blocks.len(),
-        domain_block_size,
-        domain_block_size
-    );
-    debug!(
-        "Range blocks: {} with size {}x{}",
-        range_blocks.len(),
-        range_block_size,
-        range_block_size
-    );
-
-    let mut stats = Stats::new(image.get_height());
-
-    let mut queue = VecDeque::from(range_blocks);
-    while let Some(rb) = queue.pop_front() {
-        debug!(
-            "Finding transformation for range block {} (remaining: {})",
-            rb,
-            queue.len()
+    #[instrument(level = "debug", skip(self))]
+    pub fn compress(self) -> Compressed {
+        let image_height = self.image.get_height();
+        let image_width = self.image.get_width();
+        assert_eq!(
+            image_height, image_width,
+            "Only square sized images supported"
         );
-        match Transformation::find(image.clone(), &rb, options.error_threshold) {
-            Some(transformation) => {
-                debug!("For range block {}, found best matching domain block", rb);
-                stats.report_block_mapped(rb.get_height());
-                transformations.push(transformation)
-            }
-            None => {
-                debug!("For range block {}, found no matching domain block", rb);
-                if rb.get_height() <= 1 {
-                    panic!("Nope"); // TODO
-                } else {
-                    let new_range_blocks = rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32);
-                    let new_range_blocks = new_range_blocks.into_iter().map(|nrb| nrb.flatten());
-                    new_range_blocks
-                        .into_iter()
-                        .for_each(|nrb| queue.push_back(Rc::new(nrb)))
+        info!("Compressing {}x{} image", image_height, image_width);
+        let image = Rc::new(self.image);
+
+        let mut transformations: Vec<Transformation> = Vec::new();
+
+        let domain_block_size: u32 = image.get_height();
+        let range_block_size: u32 = (image.get_height() as f64 / 2.0) as u32;
+
+        let domain_blocks = image.squared_blocks(domain_block_size);
+        let range_blocks = image
+            .squared_blocks(range_block_size)
+            .into_iter()
+            .map(Rc::new)
+            .collect::<Vec<Rc<_>>>();
+
+        debug!(
+            "Domain blocks: {} with size {}x{}",
+            domain_blocks.len(),
+            domain_block_size,
+            domain_block_size
+        );
+        debug!(
+            "Range blocks: {} with size {}x{}",
+            range_blocks.len(),
+            range_block_size,
+            range_block_size
+        );
+
+        let mut stats = Stats::new(image.get_height());
+
+        let mut queue = VecDeque::from(range_blocks);
+        while let Some(rb) = queue.pop_front() {
+            debug!(
+                "Finding transformation for range block {} (remaining: {})",
+                rb,
+                queue.len()
+            );
+            match Transformation::find(image.clone(), &rb, self.error_threshold) {
+                Some(transformation) => {
+                    debug!("For range block {}, found best matching domain block", rb);
+                    stats.report_block_mapped(rb.get_height()); // TODO: Only when we have progress!
+                    if let Some(progress_fn) = self.progress_fn {
+                        progress_fn(stats.progress())
+                    }
+                    transformations.push(transformation)
+                }
+                None => {
+                    debug!("For range block {}, found no matching domain block", rb);
+                    if rb.get_height() <= 1 {
+                        panic!("Nope"); // TODO
+                    } else {
+                        let new_range_blocks =
+                            rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32);
+                        let new_range_blocks =
+                            new_range_blocks.into_iter().map(|nrb| nrb.flatten());
+                        new_range_blocks
+                            .into_iter()
+                            .for_each(|nrb| queue.push_back(Rc::new(nrb)))
+                    }
                 }
             }
         }
+
+        transformations.into()
+    }
+}
+
+pub struct Builder<I> {
+    image: I,
+    progress_fn: Option<fn(f64) -> ()>,
+    error_threshold: Option<ErrorThreshold>,
+}
+
+impl<I> Builder<I> {
+    pub fn new(image: I) -> Self {
+        Self {
+            image,
+            progress_fn: None,
+            error_threshold: None,
+        }
     }
 
-    transformations.into()
+    pub fn with_error_threshold(mut self, error_threshold: ErrorThreshold) -> Self {
+        self.error_threshold = Some(error_threshold);
+        self
+    }
+
+    pub fn report_progress(mut self, f: fn(f64)) -> Self {
+        self.progress_fn = Some(f);
+        self
+    }
+
+    pub fn build(self) -> Compressor<I> {
+        Compressor {
+            image: self.image,
+            error_threshold: self.error_threshold.unwrap_or_default(),
+            progress_fn: self.progress_fn,
+        }
+    }
 }
 
 impl Transformation {
@@ -133,6 +177,17 @@ impl Transformation {
         }
 
         None
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum ErrorThreshold {
+    RmsAnyLowerThan(f64),
+}
+
+impl Default for ErrorThreshold {
+    fn default() -> Self {
+        Self::RmsAnyLowerThan(5.0)
     }
 }
 

@@ -21,16 +21,15 @@ fn main() {
         .with_span_events(FmtSpan::FULL)
         .init();
 
-    let image = SquaredGrayscaleImage::read_from(Path::new("mrkrabs.png"));
+    let image = SquaredGrayscaleImage::read_from(Path::new("mrkrabs_1200x1200.png"));
     info!("Image width: {}", image.get_width());
     info!("Image height: {}", image.get_height());
     let size = image.get_width();
-    let compressed = compress::quadtree::compress(
-        image,
-        compress::quadtree::Options {
-            error_threshold: ErrorThreshold::RmsAnyLowerThan(10_f64),
-        },
-    );
+    let compressed = compress::quadtree::Compressor::builder(image)
+        .report_progress(|progress| println!("{}", progress))
+        .with_error_threshold(ErrorThreshold::RmsAnyLowerThan(50f64))
+        .build()
+        .compress();
     let size_of_file = compressed
         .persist_as_json(Path::new("transformations.json"))
         .expect("Could not save compression");
