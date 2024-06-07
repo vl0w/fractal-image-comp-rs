@@ -2,6 +2,7 @@ use std::collections::VecDeque;
 use std::rc::Rc;
 use tracing::{debug, info, instrument};
 use crate::compress::Mapping;
+use crate::compress::quadtree::stats::Stats;
 use crate::image::Image;
 use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::model::{Block, Compressed, Transformation};
@@ -36,13 +37,15 @@ pub fn compress<I: Image>(image: I, options: Options) -> Compressed {
     debug!("Domain blocks: {} with size {}x{}", domain_blocks.len(), domain_block_size, domain_block_size);
     debug!("Range blocks: {} with size {}x{}", range_blocks.len(), range_block_size, range_block_size);
 
+    let mut stats = Stats::new(image.get_height());
+    
     let mut queue = VecDeque::from(range_blocks);
-
     while let Some(rb) = queue.pop_front() {
         debug!("Finding transformation for range block {} (remaining: {})", rb, queue.len());
         match Transformation::find(image.clone(), &rb, options.error_threshold) {
             Some(transformation) => {
                 debug!("For range block {}, found best matching domain block", rb);
+                stats.report_block_mapped(rb.get_height());
                 transformations.push(transformation)
             }
             None => {
@@ -80,7 +83,7 @@ impl Transformation {
             .next();
 
         if let Some((db, mapping)) = mapping {
-            debug!("Using mapping: {:?}",mapping);
+            debug!("Using mapping: {:?}", mapping);
             return Some(Self {
                 range: Block {
                     block_size: range_block.size,
@@ -98,5 +101,30 @@ impl Transformation {
         }
 
         None
+    }
+}
+
+mod stats {
+    /// Records the area of the image that has already been mapped
+    pub struct Stats {
+        image_size_squared: u32,
+        area_covered: u32,
+    }
+
+    impl Stats {
+        pub fn new(image_size: u32) -> Self {
+            Self {
+                image_size_squared: image_size * image_size,
+                area_covered: 0,
+            }
+        }
+
+        pub fn progress(&self) -> f64 {
+            self.area_covered as f64 / self.image_size_squared as f64
+        }
+
+        pub fn report_block_mapped(&mut self, range_block_size: u32) {
+            self.area_covered += range_block_size * range_block_size
+        }
     }
 }
