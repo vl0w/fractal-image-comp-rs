@@ -234,8 +234,8 @@ mod tests {
         let blocks: Vec<Rc<SquaredBlock<FakeImage>>> =
             image.squared_blocks(4).into_iter().map(Rc::new).collect();
         let mut inner_blocks = blocks[1].squared_blocks(2).into_iter();
-        let third_block = inner_blocks.next().unwrap();
-        let third_block = inner_blocks.next().unwrap();
+        let _ = inner_blocks.next().unwrap();
+        let _ = inner_blocks.next().unwrap();
         let third_block = inner_blocks.next().unwrap();
 
         assert_eq!(third_block.size, 2);
