@@ -11,7 +11,7 @@ use tracing::{debug, info, instrument};
 pub struct Compressor<I> {
     image: I,
     error_threshold: ErrorThreshold,
-    progress_fn: Option<fn(f64)>,
+    progress_fn: Option<Rc<dyn Fn(f64)>>,
 }
 
 impl<I> Compressor<I>
@@ -71,7 +71,7 @@ where
                 Some(transformation) => {
                     debug!("For range block {}, found best matching domain block", rb);
                     stats.report_block_mapped(rb.get_height()); // TODO: Only when we have progress!
-                    if let Some(progress_fn) = self.progress_fn {
+                    if let Some(progress_fn) = self.progress_fn.clone() {
                         progress_fn(stats.progress())
                     }
                     transformations.push(transformation)
@@ -99,7 +99,7 @@ where
 
 pub struct Builder<I> {
     image: I,
-    progress_fn: Option<fn(f64) -> ()>,
+    progress_fn: Option<Rc<dyn Fn(f64)>>,
     error_threshold: Option<ErrorThreshold>,
 }
 
@@ -117,8 +117,8 @@ impl<I> Builder<I> {
         self
     }
 
-    pub fn report_progress(mut self, f: fn(f64)) -> Self {
-        self.progress_fn = Some(f);
+    pub fn report_progress(mut self, f: impl Fn(f64) + 'static) -> Self {
+        self.progress_fn = Some(Rc::new(f));
         self
     }
 
