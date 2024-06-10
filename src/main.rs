@@ -1,6 +1,7 @@
 use crate::compress::quadtree::ErrorThreshold;
 use clap::{ArgAction, Parser, Subcommand};
 use std::path::{Path, PathBuf};
+use indicatif::ProgressStyle;
 use tracing::info;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::EnvFilter;
@@ -64,12 +65,18 @@ fn main() {
 
             let builder = compress::quadtree::Compressor::builder(image);
             let builder = if progress {
-                let progress_bar = indicatif::ProgressBar::new(100).with_message("Mapping blocks");
+                let progress_bar = indicatif::ProgressBar::new(100)
+                    .with_message("Mapping blocks")
+                    .with_style(ProgressStyle::with_template("{spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})")
+                        .unwrap()
+                        .progress_chars("#>-"));
+
                 builder.report_progress(move |progress| {
-                    if progress == 1f64 {
+                    progress_bar.set_length(progress.total_area as u64);
+                    if progress.finished() {
                         progress_bar.finish();
                     }
-                    progress_bar.set_position((progress * 100f64) as u64)
+                    progress_bar.set_position(progress.area_covered as u64)
                 })
             } else {
                 builder
@@ -87,7 +94,10 @@ fn main() {
                 .persist_as_json(Path::new("transformations.json"))
                 .expect("Could not save compression");
 
-            info!("Size of compression: {}", indicatif::HumanBytes(size_of_file));
+            info!(
+                "Size of compression: {}",
+                indicatif::HumanBytes(size_of_file)
+            );
         }
         Commands::Decompress { .. } => {
             // let image = decompress::decompress(size, compressed);

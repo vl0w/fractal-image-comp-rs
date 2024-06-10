@@ -1,4 +1,4 @@
-use crate::compress::quadtree::stats::Stats;
+use crate::compress::quadtree::stats::{Stats, StatsReporting};
 use crate::compress::Mapping;
 use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
@@ -11,7 +11,7 @@ use tracing::{debug, info, instrument};
 pub struct Compressor<I> {
     image: I,
     error_threshold: ErrorThreshold,
-    progress_fn: Option<Rc<dyn Fn(f64)>>,
+    progress_fn: Option<Rc<dyn Fn(stats::StatsReporting)>>,
 }
 
 impl<I> Compressor<I>
@@ -72,7 +72,7 @@ where
                     debug!("For range block {}, found best matching domain block", rb);
                     stats.report_block_mapped(rb.get_height()); // TODO: Only when we have progress!
                     if let Some(progress_fn) = self.progress_fn.clone() {
-                        progress_fn(stats.progress())
+                        progress_fn(stats.report())
                     }
                     transformations.push(transformation)
                 }
@@ -99,7 +99,7 @@ where
 
 pub struct Builder<I> {
     image: I,
-    progress_fn: Option<Rc<dyn Fn(f64)>>,
+    progress_fn: Option<Rc<dyn Fn(StatsReporting)>>,
     error_threshold: Option<ErrorThreshold>,
 }
 
@@ -117,7 +117,7 @@ impl<I> Builder<I> {
         self
     }
 
-    pub fn report_progress(mut self, f: impl Fn(f64) + 'static) -> Self {
+    pub fn report_progress(mut self, f: impl Fn(StatsReporting) + 'static) -> Self {
         self.progress_fn = Some(Rc::new(f));
         self
     }
@@ -192,10 +192,23 @@ impl Default for ErrorThreshold {
 }
 
 mod stats {
+
+    #[derive(Clone, Copy, Debug)]
+    pub struct StatsReporting {
+        pub area_covered: u32,
+        pub total_area: u32,
+    }
+    
+    impl StatsReporting {
+        pub fn finished(&self) -> bool {
+            self.area_covered == self.total_area
+        }
+    }
+
     /// Records the area of the image that has already been mapped
     pub struct Stats {
-        image_size_squared: u32,
-        area_covered: u32,
+        pub image_size_squared: u32,
+        pub area_covered: u32,
     }
 
     impl Stats {
@@ -206,12 +219,15 @@ mod stats {
             }
         }
 
-        pub fn progress(&self) -> f64 {
-            self.area_covered as f64 / self.image_size_squared as f64
-        }
-
         pub fn report_block_mapped(&mut self, range_block_size: u32) {
             self.area_covered += range_block_size * range_block_size
+        }
+
+        pub fn report(&self) -> StatsReporting {
+            StatsReporting {
+                area_covered: self.area_covered,
+                total_area: self.image_size_squared
+            }
         }
     }
 }
