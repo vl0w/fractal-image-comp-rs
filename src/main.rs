@@ -1,13 +1,14 @@
 use crate::compress::quadtree::ErrorThreshold;
 use clap::{ArgAction, Parser, Subcommand};
-use std::path::{Path, PathBuf};
 use indicatif::ProgressStyle;
+use std::path::PathBuf;
 use tracing::info;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::EnvFilter;
 
 use crate::image::Image;
-use crate::preprocessing::SquaredGrayscaleImage;
+use crate::model::Compressed;
+use crate::preprocessing::{SafeableImage, SquaredGrayscaleImage};
 
 mod compress;
 mod decompress;
@@ -43,7 +44,9 @@ enum Commands {
         rms_error_threshold: Option<f64>,
     },
     Decompress {
-        path: PathBuf,
+        input_path: PathBuf,
+
+        output_path: PathBuf,
     },
 }
 
@@ -86,7 +89,8 @@ fn main() {
             };
 
             let compressor = if let Some(rms_error_threshold) = rms_error_threshold {
-                compressor.with_error_threshold(ErrorThreshold::RmsAnyLowerThan(rms_error_threshold))
+                compressor
+                    .with_error_threshold(ErrorThreshold::RmsAnyLowerThan(rms_error_threshold))
             } else {
                 compressor
             };
@@ -102,9 +106,15 @@ fn main() {
                 indicatif::HumanBytes(size_of_file)
             );
         }
-        Commands::Decompress { .. } => {
-            // let image = decompress::decompress(size, compressed);
-            // image.save_image_as_png(Path::new("out.png"));
+        Commands::Decompress {
+            input_path,
+            output_path,
+        } => {
+            let compressed =
+                Compressed::read_from_json(&input_path).expect("Could not read compressed file");
+            // TODO: No -> Size needs to be part of Compressed!
+            let image = decompress::decompress(compressed.0[0].domain.image_size, compressed);
+            image.save_image_as_png(&output_path);
         }
     }
 }
