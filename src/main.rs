@@ -27,7 +27,9 @@ struct Cli {
 #[derive(Subcommand)]
 enum Commands {
     Compress {
-        path: PathBuf,
+        input_path: PathBuf,
+
+        output_path: PathBuf,
 
         #[arg(short, long, action = ArgAction::SetTrue, help = "Reports progress" , default_value_t = false)]
         progress: bool,
@@ -55,11 +57,12 @@ fn main() {
 
     match cli.command {
         Commands::Compress {
-            path,
+            input_path,
+            output_path,
             progress,
             rms_error_threshold,
         } => {
-            let image = SquaredGrayscaleImage::read_from(&path);
+            let image = SquaredGrayscaleImage::read_from(&input_path);
             info!("Image width: {}", image.get_width());
             info!("Image height: {}", image.get_height());
 
@@ -91,7 +94,7 @@ fn main() {
             let compressed = compressor.compress();
 
             let size_of_file = compressed
-                .persist_as_json(Path::new("transformations.json"))
+                .persist_as_json(&output_path)
                 .expect("Could not save compression");
 
             info!(
