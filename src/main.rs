@@ -47,6 +47,9 @@ enum Commands {
         input_path: PathBuf,
 
         output_path: PathBuf,
+
+        #[arg(short,long, default_value_t = 10)]
+        iterations: u8,
     },
 }
 
@@ -109,11 +112,12 @@ fn main() {
         Commands::Decompress {
             input_path,
             output_path,
+            iterations
         } => {
             let compressed =
                 Compressed::read_from_json(&input_path).expect("Could not read compressed file");
             // TODO: No -> Size needs to be part of Compressed!
-            let image = decompress::decompress(compressed.0[0].domain.image_size, compressed);
+            let image = decompress::decompress(compressed.0[0].domain.image_size, compressed, iterations);
             image.save_image_as_png(&output_path);
         }
     }

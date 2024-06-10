@@ -10,12 +10,12 @@ use std::rc::Rc;
 use tracing::instrument;
 
 #[instrument(level = "debug", skip(compressed))]
-pub fn decompress(size: u32, compressed: Compressed) -> OwnedImage {
+pub fn decompress(size: u32, compressed: Compressed, iterations: u8) -> OwnedImage {
     // Make image
     let mut image = OwnedImage::random(size);
 
     let transformations = compressed.0;
-    for iteration in 0..10 {
+    for iteration in 0..iterations {
         let previous_pass = Rc::new(image.clone());
         for transformation in transformations.iter() {
             transformation.apply_to(previous_pass.clone(), &mut image);
