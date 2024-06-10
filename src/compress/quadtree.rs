@@ -18,8 +18,12 @@ impl<I> Compressor<I>
 where
     I: Image,
 {
-    pub fn builder(image: I) -> Builder<I> {
-        Builder::new(image)
+    pub fn new(image: I) -> Self {
+        Self {
+            image,
+            error_threshold: ErrorThreshold::default(),
+            progress_fn: None,
+        }
     }
 
     #[instrument(level = "debug", skip(self))]
@@ -95,39 +99,18 @@ where
 
         transformations.into()
     }
-}
-
-pub struct Builder<I> {
-    image: I,
-    progress_fn: Option<Rc<dyn Fn(StatsReporting)>>,
-    error_threshold: Option<ErrorThreshold>,
-}
-
-impl<I> Builder<I> {
-    pub fn new(image: I) -> Self {
-        Self {
-            image,
-            progress_fn: None,
-            error_threshold: None,
-        }
-    }
 
     pub fn with_error_threshold(mut self, error_threshold: ErrorThreshold) -> Self {
-        self.error_threshold = Some(error_threshold);
+        self.error_threshold = error_threshold;
         self
     }
 
-    pub fn report_progress(mut self, f: impl Fn(StatsReporting) + 'static) -> Self {
-        self.progress_fn = Some(Rc::new(f));
+    pub fn with_progress_reporter<F: Fn(StatsReporting) + 'static>(
+        mut self,
+        progress_fn: F,
+    ) -> Self {
+        self.progress_fn = Some(Rc::new(progress_fn));
         self
-    }
-
-    pub fn build(self) -> Compressor<I> {
-        Compressor {
-            image: self.image,
-            error_threshold: self.error_threshold.unwrap_or_default(),
-            progress_fn: self.progress_fn,
-        }
     }
 }
 
@@ -198,7 +181,7 @@ mod stats {
         pub area_covered: u32,
         pub total_area: u32,
     }
-    
+
     impl StatsReporting {
         pub fn finished(&self) -> bool {
             self.area_covered == self.total_area
@@ -226,7 +209,7 @@ mod stats {
         pub fn report(&self) -> StatsReporting {
             StatsReporting {
                 area_covered: self.area_covered,
-                total_area: self.image_size_squared
+                total_area: self.image_size_squared,
             }
         }
     }

@@ -63,15 +63,15 @@ fn main() {
             info!("Image width: {}", image.get_width());
             info!("Image height: {}", image.get_height());
 
-            let builder = compress::quadtree::Compressor::builder(image);
-            let builder = if progress {
+            let compressor = compress::quadtree::Compressor::new(image);
+            let compressor = if progress {
                 let progress_bar = indicatif::ProgressBar::new(100)
                     .with_message("Mapping blocks")
                     .with_style(ProgressStyle::with_template("{spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})")
                         .unwrap()
                         .progress_chars("#>-"));
 
-                builder.report_progress(move |progress| {
+                compressor.with_progress_reporter(move |progress| {
                     progress_bar.set_length(progress.total_area as u64);
                     if progress.finished() {
                         progress_bar.finish();
@@ -79,16 +79,16 @@ fn main() {
                     progress_bar.set_position(progress.area_covered as u64)
                 })
             } else {
-                builder
+                compressor
             };
 
-            let builder = if let Some(rms_error_threshold) = rms_error_threshold {
-                builder.with_error_threshold(ErrorThreshold::RmsAnyLowerThan(rms_error_threshold))
+            let compressor = if let Some(rms_error_threshold) = rms_error_threshold {
+                compressor.with_error_threshold(ErrorThreshold::RmsAnyLowerThan(rms_error_threshold))
             } else {
-                builder
+                compressor
             };
 
-            let compressed = builder.build().compress();
+            let compressed = compressor.compress();
 
             let size_of_file = compressed
                 .persist_as_json(Path::new("transformations.json"))
