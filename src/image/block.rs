@@ -1,5 +1,4 @@
-use std::rc::Rc;
-
+use std::sync::Arc;
 use derive_more::Display;
 use itertools::Itertools;
 
@@ -13,7 +12,7 @@ where
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>>;
 }
 
-impl<I> IntoSquaredBlocks<I> for Rc<I>
+impl<I> IntoSquaredBlocks<I> for Arc<I>
 where
     I: Image,
 {
@@ -42,7 +41,7 @@ where
 #[derive(Display)]
 #[display(fmt = "Block² {} {}", size, origin)]
 pub struct SquaredBlock<I: Image> {
-    pub image: Rc<I>,
+    pub image: Arc<I>,
 
     #[display(fmt = "{}x{}", _0)]
     pub size: u32,

@@ -6,6 +6,7 @@ use crate::image::Image;
 use crate::model::{Block, Compressed, Transformation};
 use std::collections::VecDeque;
 use std::rc::Rc;
+use std::sync::Arc;
 use tracing::{debug, info, instrument};
 
 pub struct Compressor<I> {
@@ -35,7 +36,7 @@ where
             "Only square sized images supported"
         );
         info!("Compressing {}x{} image", image_height, image_width);
-        let image = Rc::new(self.image);
+        let image = Arc::new(self.image);
 
         let mut transformations: Vec<Transformation> = Vec::new();
 
@@ -46,8 +47,8 @@ where
         let range_blocks = image
             .squared_blocks(range_block_size)
             .into_iter()
-            .map(Rc::new)
-            .collect::<Vec<Rc<_>>>();
+            .map(Arc::new)
+            .collect::<Vec<Arc<_>>>();
 
         debug!(
             "Domain blocks: {} with size {}x{}",
@@ -91,7 +92,7 @@ where
                             new_range_blocks.into_iter().map(|nrb| nrb.flatten());
                         new_range_blocks
                             .into_iter()
-                            .for_each(|nrb| queue.push_back(Rc::new(nrb)))
+                            .for_each(|nrb| queue.push_back(Arc::new(nrb)))
                     }
                 }
             }
@@ -116,7 +117,7 @@ where
 
 impl Transformation {
     fn find<I: Image>(
-        image: Rc<I>,
+        image: Arc<I>,
         range_block: &SquaredBlock<I>,
         error_threshold: ErrorThreshold,
     ) -> Option<Self> {

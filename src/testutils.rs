@@ -3,7 +3,7 @@ use crate::image::Image;
 #[cfg(test)]
 use crate::image::Pixel;
 #[cfg(test)]
-use std::rc::Rc;
+use std::sync::Arc;
 
 #[cfg(test)]
 pub struct FakeImage {
@@ -30,11 +30,11 @@ impl Image for FakeImage {
 
 #[cfg(test)]
 impl FakeImage {
-    pub fn new(width: u32, height: u32) -> Rc<Self> {
-        Rc::new(Self { width, height })
+    pub fn new(width: u32, height: u32) -> Arc<Self> {
+        Arc::new(Self { width, height })
     }
 
-    pub fn squared(size: u32) -> Rc<Self> {
+    pub fn squared(size: u32) -> Arc<Self> {
         Self::new(size, size)
     }
 }
