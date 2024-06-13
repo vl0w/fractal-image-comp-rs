@@ -4,6 +4,7 @@ use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
 use crate::image::Image;
 use crate::model::{Block, Compressed, Transformation};
+use rayon::prelude::*;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use std::sync::Arc;
@@ -17,7 +18,7 @@ pub struct Compressor<I> {
 
 impl<I> Compressor<I>
 where
-    I: Image,
+    I: Image + Send,
 {
     pub fn new(image: I) -> Self {
         Self {
@@ -116,7 +117,7 @@ where
 }
 
 impl Transformation {
-    fn find<I: Image>(
+    fn find<I: Image + Send>(
         image: Arc<I>,
         range_block: &SquaredBlock<I>,
         error_threshold: ErrorThreshold,
@@ -126,8 +127,8 @@ impl Transformation {
 
         let domain_blocks = image.squared_blocks(domain_block_size);
 
-        let mapping = domain_blocks
-            .iter()
+        let vec = domain_blocks
+            .par_iter()
             .map(|d| d.downscale_2x2())
             .map(|db| {
                 let mapping = Mapping::compute(&db, range_block);
@@ -139,8 +140,9 @@ impl Transformation {
                     mapping.error < acceptable_error
                 }
             })
-            .take(1)
-            .next();
+            .take_any(1)
+            .collect::<Vec<_>>();
+        let mapping = vec.first();
 
         if let Some((db, mapping)) = mapping {
             debug!("Using mapping: {:?}", mapping);

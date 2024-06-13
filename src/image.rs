@@ -34,7 +34,7 @@ impl Add<Coords> for Coords {
     }
 }
 
-pub trait Image {
+pub trait Image: Send+Sync {
     fn get_width(&self) -> u32;
     fn get_height(&self) -> u32;
     fn pixel(&self, x: u32, y: u32) -> Pixel;

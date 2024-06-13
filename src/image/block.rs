@@ -1,20 +1,20 @@
-use std::sync::Arc;
 use derive_more::Display;
 use itertools::Itertools;
+use std::sync::Arc;
 
 use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, Pixel};
 
 pub trait IntoSquaredBlocks<I>
 where
-    I: Image,
+    I: Image + Send + Sync,
 {
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>>;
 }
 
 impl<I> IntoSquaredBlocks<I> for Arc<I>
 where
-    I: Image,
+    I: Image + Send+Sync,
 {
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>> {
         assert_eq!(self.get_width() % size, 0);
@@ -40,7 +40,7 @@ where
 
 #[derive(Display)]
 #[display(fmt = "Block² {} {}", size, origin)]
-pub struct SquaredBlock<I: Image> {
+pub struct SquaredBlock<I: Image + Send> {
     pub image: Arc<I>,
 
     #[display(fmt = "{}x{}", _0)]
@@ -50,7 +50,7 @@ pub struct SquaredBlock<I: Image> {
     pub origin: Coords,
 }
 
-impl<I: Image> SquaredBlock<SquaredBlock<I>> {
+impl<I: Image + Send + Sync> SquaredBlock<SquaredBlock<I>> {
     pub fn flatten(self) -> SquaredBlock<I> {
         SquaredBlock {
             image: self.image.image.clone(),
@@ -60,7 +60,7 @@ impl<I: Image> SquaredBlock<SquaredBlock<I>> {
     }
 }
 
-impl<I: Image> Image for SquaredBlock<I> {
+impl<I: Image + Send + Sync> Image for SquaredBlock<I> {
     fn get_width(&self) -> u32 {
         self.size
     }
@@ -76,7 +76,7 @@ impl<I: Image> Image for SquaredBlock<I> {
     }
 }
 
-impl<I: Image> IterablePixels for SquaredBlock<I> {
+impl<I: Image + Send + Sync> IterablePixels for SquaredBlock<I> {
     fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
         PixelIterator::new(self)
     }
