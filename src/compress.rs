@@ -54,14 +54,20 @@ impl Mapping {
             + s * (s * a_squared_sum - 2.0 * a_times_b_sum + 2.0 * o * a_sum)
             + o * (n * o - 2.0 * b_sum))
             / n;
-        let rms_error = r.sqrt();
+
+        let rms_error = if s.abs() > 1.0 {
+            f64::MAX
+        } else {
+            r.sqrt()
+        };
 
         trace!("saturation = {}", s);
         trace!("brightness = {}", o);
         trace!("RMS error = {}", rms_error);
+
         Self {
             error: rms_error,
-            brightness: (o as i16).min(256).max(0), // TODO: Weird right?
+            brightness: (o as i16).clamp(0, 256),
             saturation: s,
         }
     }
