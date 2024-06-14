@@ -4,6 +4,7 @@ use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
 use crate::image::Image;
 use crate::model::{Block, Compressed, Transformation};
+use itertools::Itertools;
 use std::collections::VecDeque;
 use std::rc::Rc;
 use tracing::{debug, info, instrument};
@@ -114,6 +115,34 @@ where
     }
 }
 
+struct DomainBlockMapping<T>((T, Mapping));
+
+impl<T> PartialEq for DomainBlockMapping<T> {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 .1.error == other.0 .1.error
+    }
+}
+
+impl<T> Eq for DomainBlockMapping<T> {}
+
+impl<T> PartialOrd for DomainBlockMapping<T> {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match self.0 .1.error < other.0 .1.error {
+            true => Some(std::cmp::Ordering::Less),
+            false => Some(std::cmp::Ordering::Greater),
+        }
+    }
+}
+
+impl<T> Ord for DomainBlockMapping<T> {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        match self.0 .1.error < other.0 .1.error {
+            true => std::cmp::Ordering::Less,
+            false => std::cmp::Ordering::Greater,
+        }
+    }
+}
+
 impl Transformation {
     fn find<I: Image>(
         image: Rc<I>,
@@ -138,6 +167,9 @@ impl Transformation {
                     mapping.error < acceptable_error
                 }
             })
+            .map(|x| DomainBlockMapping(x))
+            .sorted()
+            .map(|x| x.0)
             .take(1)
             .next();
 
