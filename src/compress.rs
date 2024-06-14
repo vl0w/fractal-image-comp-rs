@@ -54,7 +54,12 @@ impl Mapping {
             + s * (s * a_squared_sum - 2.0 * a_times_b_sum + 2.0 * o * a_sum)
             + o * (n * o - 2.0 * b_sum))
             / n;
-        let rms_error = r.sqrt();
+
+        let rms_error = if s > 1.0 || s < -1.0 {
+            f64::MAX - 1.0
+        } else {
+            r.sqrt()
+        };
 
         trace!("saturation = {}", s);
         trace!("brightness = {}", o);
