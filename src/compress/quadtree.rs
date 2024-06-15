@@ -1,4 +1,3 @@
-use crate::compress::quadtree::stats::{Stats, StatsReporting};
 use crate::compress::Mapping;
 use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
@@ -13,7 +12,7 @@ pub struct Compressor<I> {
     image: Arc<I>,
     error_threshold: ErrorThreshold,
     progress_fn: Option<Arc<dyn Fn(stats::StatsReporting) + Send + Sync>>,
-    stats: Arc<Stats>,
+    stats: Arc<stats::Stats>,
 }
 
 impl<I> Compressor<I>
@@ -24,7 +23,7 @@ where
         Self {
             error_threshold: ErrorThreshold::default(),
             progress_fn: None,
-            stats: Arc::new(Stats::new(image.get_height())),
+            stats: Arc::new(stats::Stats::new(image.get_height())),
             image: Arc::new(image),
         }
     }
@@ -107,7 +106,7 @@ where
         self
     }
 
-    pub fn with_progress_reporter<F: Fn(StatsReporting) + Send + Sync + 'static>(
+    pub fn with_progress_reporter<F: Fn(stats::StatsReporting) + Send + Sync + 'static>(
         mut self,
         progress_fn: F,
     ) -> Self {
