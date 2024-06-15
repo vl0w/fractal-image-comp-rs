@@ -1,6 +1,7 @@
 use crate::compress::quadtree::ErrorThreshold;
 use clap::{ArgAction, Parser, Subcommand};
 use indicatif::ProgressStyle;
+use std::ffi::OsStr;
 use std::path::PathBuf;
 use tracing::info;
 use tracing_subscriber::fmt::format::FmtSpan;
@@ -48,8 +49,11 @@ enum Commands {
 
         output_path: PathBuf,
 
-        #[arg(short,long, default_value_t = 10)]
+        #[arg(short, long, default_value_t = 10)]
         iterations: u8,
+
+        #[arg(short, long, default_value_t = false)]
+        keep: bool,
     },
 }
 
@@ -112,12 +116,46 @@ fn main() {
         Commands::Decompress {
             input_path,
             output_path,
-            iterations
+            iterations,
+            keep,
         } => {
             let compressed =
                 Compressed::read_from_json(&input_path).expect("Could not read compressed file");
-            let image = decompress::decompress(compressed, iterations);
-            image.save_image_as_png(&output_path);
+            let decompressed = decompress::decompress(
+                compressed,
+                decompress::Options {
+                    iterations,
+                    keep_each_iteration: keep,
+                },
+            );
+
+            if let Some(iterations) = &decompressed.iterations {
+                let original_file_name = output_path
+                    .file_stem()
+                    .unwrap_or(OsStr::new("decompressed"))
+                    .to_str()
+                    .expect("Unable to process this file name");
+                let extension = output_path
+                    .extension()
+                    .unwrap_or(OsStr::new("png"))
+                    .to_str()
+                    .expect("Unable to process this file extension");
+                iterations
+                    .iter()
+                    .enumerate()
+                    .map(|(index, image)| {
+                        (
+                            format!("{}.{}.{}", original_file_name, index, extension),
+                            image,
+                        )
+                    })
+                    .map(|(new_file_name, image)| {
+                        (output_path.with_file_name(new_file_name), image)
+                    })
+                    .for_each(|(new_file_path, image)| image.save_image_as_png(&new_file_path))
+            }
+
+            decompressed.image.save_image_as_png(&output_path);
         }
     }
 }

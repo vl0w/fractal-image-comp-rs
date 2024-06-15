@@ -3,26 +3,44 @@ use crate::image::downscale::IntoDownscaled;
 use crate::image::owned::OwnedImage;
 use crate::image::{Image, IterablePixels, MutableImage, Size};
 use crate::model::{Compressed, Transformation};
-use crate::preprocessing::SafeableImage;
-use image::ImageFormat;
-use std::path::Path;
 use std::sync::Arc;
 use tracing::instrument;
 
-#[instrument(level = "debug", skip(compressed))]
-pub fn decompress(compressed: Compressed, iterations: u8) -> OwnedImage {
-    let mut image = OwnedImage::random(Size::new(compressed.width, compressed.height));
+#[derive(Debug)]
+pub struct Options {
+    pub iterations: u8,
+    pub keep_each_iteration: bool,
+}
 
-    for iteration in 0..iterations {
+pub struct Decompressed {
+    pub image: OwnedImage,
+    pub iterations: Option<Vec<OwnedImage>>,
+}
+
+#[instrument(level = "debug", skip(compressed))]
+pub fn decompress(compressed: Compressed, options: Options) -> Decompressed {
+    let mut image = OwnedImage::random(Size::new(compressed.width, compressed.height));
+    let mut image_per_iteration: Option<Vec<OwnedImage>> = match options.keep_each_iteration {
+        false => None,
+        true => Some(vec![]),
+    };
+
+    for _ in 0..options.iterations {
         let previous_pass = Arc::new(image.clone());
         for transformation in compressed.transformations.iter() {
             transformation.apply_to(previous_pass.clone(), &mut image);
         }
-        let filename = format!("decompressed_{}.png", iteration);
-        image.save_image(Path::new(&filename), ImageFormat::Png)
+
+        match image_per_iteration.as_mut() {
+            None => (),
+            Some(it) => it.push(image.clone()),
+        }
     }
 
-    image
+    Decompressed {
+        image,
+        iterations: image_per_iteration,
+    }
 }
 
 impl Transformation {
