@@ -6,6 +6,7 @@ use crate::image::Image;
 use crate::model::{Block, Compressed, Transformation};
 use rayon::prelude::*;
 use std::sync::Arc;
+use log::warn;
 use tracing::{debug, info, instrument};
 
 pub struct Compressor<I> {
@@ -86,7 +87,8 @@ where
             None => {
                 debug!("For range block {}, found no matching domain block", rb);
                 if rb.get_height() <= 1 {
-                    panic!("Nope"); // TODO
+                    warn!("Unable to map range block {}", rb);
+                    vec![]
                 } else {
                     rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32)
                         .into_par_iter()
