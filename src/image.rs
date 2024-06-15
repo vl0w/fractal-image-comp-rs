@@ -16,6 +16,7 @@ pub struct Coords {
     pub y: u32,
 }
 
+/// A macro to create [Coords] of the form `(x,y)`.
 #[macro_export]
 macro_rules! coords {
     ($x: expr, $y: expr) => {
@@ -34,7 +35,7 @@ impl Add<Coords> for Coords {
     }
 }
 
-pub trait Image: Send+Sync {
+pub trait Image: Send + Sync {
     fn get_width(&self) -> u32;
     fn get_height(&self) -> u32;
     fn pixel(&self, x: u32, y: u32) -> Pixel;
