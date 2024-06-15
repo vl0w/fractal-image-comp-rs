@@ -80,7 +80,6 @@ impl<I: Image + Send + Sync> IterablePixels for SquaredBlock<I> {
 
 #[cfg(test)]
 mod tests {
-    use std::rc::Rc;
     use crate::testutils::FakeImage;
 
     use super::*;
@@ -181,13 +180,13 @@ mod tests {
         // 12 13 14 15
 
         let image = FakeImage::squared(4);
-        let blocks: Vec<Rc<SquaredBlock<FakeImage>>> =
-            image.squared_blocks(4).into_iter().map(Rc::new).collect();
+        let blocks: Vec<Arc<SquaredBlock<FakeImage>>> =
+            image.squared_blocks(4).into_iter().map(Arc::new).collect();
         assert_eq!(blocks.len(), 1);
-        let blocks: Vec<Rc<SquaredBlock<SquaredBlock<FakeImage>>>> = blocks[0]
+        let blocks: Vec<Arc<SquaredBlock<SquaredBlock<FakeImage>>>> = blocks[0]
             .squared_blocks(2)
             .into_iter()
-            .map(Rc::new)
+            .map(Arc::new)
             .collect();
         assert_eq!(blocks.len(), 4);
         assert_eq!(blocks[0].pixel(0, 0), 0);
@@ -227,8 +226,8 @@ mod tests {
         // 56 57 58 59 60 61 62 63
 
         let image = FakeImage::squared(8);
-        let blocks: Vec<Rc<SquaredBlock<FakeImage>>> =
-            image.squared_blocks(4).into_iter().map(Rc::new).collect();
+        let blocks: Vec<Arc<SquaredBlock<FakeImage>>> =
+            image.squared_blocks(4).into_iter().map(Arc::new).collect();
         let mut inner_blocks = blocks[1].squared_blocks(2).into_iter();
         let _ = inner_blocks.next().unwrap();
         let _ = inner_blocks.next().unwrap();

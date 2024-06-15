@@ -54,7 +54,7 @@ mod tests {
 
     #[test]
     fn create_random_owned_image() {
-        let image = OwnedImage::random(16);
+        let image = OwnedImage::random(Size::squared(16));
         assert_eq!(16 * 16, image.data.len());
         assert_eq!(16, image.get_width());
         assert_eq!(16, image.get_height());
