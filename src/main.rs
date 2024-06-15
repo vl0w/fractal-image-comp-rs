@@ -44,14 +44,19 @@ enum Commands {
         )]
         rms_error_threshold: Option<f64>,
     },
+    /// Decompresses a compressed image as a PNG file.
     Decompress {
+        /// The path (including a file name) of the compressed image.
         input_path: PathBuf,
 
+        /// The path (including a file name) where the decompressed image should be saved.
         output_path: PathBuf,
 
+        /// The amount of iterations to use for decompression.
         #[arg(short, long, default_value_t = 10)]
         iterations: u8,
 
+        /// Stores the intermediate decompression results for each iteration.
         #[arg(short, long, default_value_t = false)]
         keep: bool,
     },
