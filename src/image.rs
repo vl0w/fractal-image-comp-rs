@@ -1,5 +1,5 @@
 use derive_more::Display;
-use std::ops::Add;
+use std::ops::{Add, Div, Mul};
 
 pub mod block;
 pub mod downscale;
@@ -7,6 +7,60 @@ pub mod owned;
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
+
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Display)]
+#[display(fmt = "{}x{})", width, height)]
+pub struct Size {
+    width: u32,
+    height: u32,
+}
+
+impl Size {
+    pub fn new(width: u32, height: u32) -> Self {
+        Self { width, height }
+    }
+
+    pub fn squared(size: u32) -> Self {
+        Self::new(size, size)
+    }
+
+    fn area(&self) -> u32 {
+        self.width * self.height
+    }
+}
+
+impl Div<u32> for Size {
+    type Output = Size;
+
+    fn div(self, rhs: u32) -> Self::Output {
+        Self {
+            width: self.width / rhs,
+            height: self.width / rhs,
+        }
+    }
+}
+
+impl Mul<u32> for Size {
+    type Output = Size;
+
+    fn mul(self, rhs: u32) -> Self::Output {
+        Self::Output {
+            width: self.width * rhs,
+            height: self.width * rhs,
+        }
+    }
+}
+
+impl Mul<Size> for u32 {
+    type Output = Size;
+
+    fn mul(self, rhs: Size) -> Self::Output {
+        Self::Output {
+            width: rhs.width * self,
+            height: rhs.width * self,
+        }
+    }
+}
 
 /// Represents the coordinates of a pixel
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Display)]
@@ -36,8 +90,16 @@ impl Add<Coords> for Coords {
 }
 
 pub trait Image: Send + Sync {
-    fn get_width(&self) -> u32;
-    fn get_height(&self) -> u32;
+    fn get_size(&self) -> Size;
+
+    fn get_height(&self) -> u32 {
+        return self.get_size().height;
+    }
+
+    fn get_width(&self) -> u32 {
+        return self.get_size().width;
+    }
+
     fn pixel(&self, x: u32, y: u32) -> Pixel;
 }
 
@@ -54,7 +116,7 @@ pub trait MutableImage {
 }
 
 pub mod iter {
-    use crate::image::{Coords, Image, Pixel};
+    use super::*;
 
     #[derive(Copy, Clone)]
     enum Next {
@@ -63,18 +125,18 @@ pub mod iter {
     }
 
     impl Next {
-        fn next_index(&self, width: u32, height: u32) -> Self {
+        fn next_index(&self, size: Size) -> Self {
             match self {
                 Next::Done => Next::Done,
                 Next::Xy(x, y) => {
                     let mut nx = x + 1;
                     let mut ny = *y;
-                    if nx >= width {
+                    if nx >= size.width {
                         nx = 0;
                         ny += 1;
                     }
 
-                    if ny >= height {
+                    if ny >= size.height {
                         Next::Done
                     } else {
                         Next::Xy(nx, ny)
@@ -105,9 +167,7 @@ pub mod iter {
             match self.next {
                 Next::Done => None,
                 Next::Xy(x, y) => {
-                    self.next = self
-                        .next
-                        .next_index(self.image.get_width(), self.image.get_height());
+                    self.next = self.next.next_index(self.image.get_size());
                     Some((self.image.pixel(x, y), coords!(x, y)))
                 }
             }

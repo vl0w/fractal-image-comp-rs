@@ -3,35 +3,34 @@ use crate::image::Image;
 #[cfg(test)]
 use crate::image::Pixel;
 #[cfg(test)]
+use crate::image::Size;
+#[cfg(test)]
 use std::sync::Arc;
 
 #[cfg(test)]
 pub struct FakeImage {
-    width: u32,
-    height: u32,
+    size: Size,
 }
 
 #[cfg(test)]
 impl Image for FakeImage {
-    fn get_width(&self) -> u32 {
-        self.width
-    }
-
-    fn get_height(&self) -> u32 {
-        self.height
+    fn get_size(&self) -> Size {
+        self.size
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {
-        assert!(x < self.width);
-        assert!(y < self.height);
-        (y * self.width + x) as u8
+        assert!(x < self.get_width());
+        assert!(y < self.get_height());
+        (y * self.get_width() + x) as u8
     }
 }
 
 #[cfg(test)]
 impl FakeImage {
     pub fn new(width: u32, height: u32) -> Arc<Self> {
-        Arc::new(Self { width, height })
+        Arc::new(Self {
+            size: Size::new(width, height),
+        })
     }
 
     pub fn squared(size: u32) -> Arc<Self> {

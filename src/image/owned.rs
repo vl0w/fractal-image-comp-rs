@@ -1,52 +1,43 @@
 use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, MutableImage, Pixel};
+use crate::image::{Coords, Image, IterablePixels, MutableImage, Pixel, Size};
 use rand::{thread_rng, Rng};
 
 #[derive(Clone)]
 pub struct OwnedImage {
-    width: u32,
-    height: u32,
+    size: Size,
     data: Vec<u8>,
 }
 
 impl OwnedImage {
-    pub fn random(width: u32, height: u32) -> Self {
-        let mut data = Vec::with_capacity((width * height) as usize);
+    pub fn random(size: Size) -> Self {
+        let mut data = Vec::with_capacity((size.area()) as usize);
 
-        for _ in 0..(width * height) {
+        for _ in 0..(size.area()) {
             data.push(thread_rng().gen_range(0..256) as Pixel);
         }
 
-        Self {
-            width,
-            height,
-            data,
-        }
+        Self { size, data }
     }
 }
 
 impl Image for OwnedImage {
-    fn get_width(&self) -> u32 {
-        self.width
-    }
-
-    fn get_height(&self) -> u32 {
-        self.height
+    fn get_size(&self) -> Size {
+        self.size
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {
-        assert!(x < self.width);
-        assert!(y < self.height);
-        let idx = (y * self.width + x) as usize;
+        assert!(x < self.get_width());
+        assert!(y < self.get_height());
+        let idx = (y * self.get_width() + x) as usize;
         self.data[idx]
     }
 }
 
 impl MutableImage for OwnedImage {
     fn set_pixel(&mut self, x: u32, y: u32, value: Pixel) {
-        assert!(x < self.width);
-        assert!(y < self.height);
-        let idx = (y * self.width + x) as usize;
+        assert!(x < self.get_width());
+        assert!(y < self.get_height());
+        let idx = (y * self.get_width() + x) as usize;
         self.data[idx] = value;
     }
 }

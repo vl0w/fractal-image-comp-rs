@@ -1,5 +1,5 @@
 use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel};
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 
 pub trait IntoDownscaled<'a, I>
 where
@@ -28,12 +28,8 @@ impl<'a, I: Image> Downscaled2x2<'a, I> {
 }
 
 impl<'a, I: Image> Image for Downscaled2x2<'a, I> {
-    fn get_width(&self) -> u32 {
-        self.image.get_width() / 2
-    }
-
-    fn get_height(&self) -> u32 {
-        self.image.get_height() / 2
+    fn get_size(&self) -> Size {
+        self.image.get_size() / 2
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {

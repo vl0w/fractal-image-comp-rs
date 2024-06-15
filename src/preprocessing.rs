@@ -1,5 +1,5 @@
 use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel};
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 use image::imageops::FilterType;
 use image::{DynamicImage, GrayImage, ImageFormat};
 use std::cmp::min;
@@ -9,7 +9,7 @@ use tracing::debug;
 #[derive(Debug)]
 pub struct SquaredGrayscaleImage {
     pixels: Vec<u8>,
-    size: u32,
+    size: Size
 }
 
 impl SquaredGrayscaleImage {
@@ -36,17 +36,13 @@ impl SquaredGrayscaleImage {
 
         Self {
             pixels: grayscale,
-            size,
+            size: Size::squared(size),
         }
     }
 }
 
 impl Image for SquaredGrayscaleImage {
-    fn get_width(&self) -> u32 {
-        self.size
-    }
-
-    fn get_height(&self) -> u32 {
+    fn get_size(&self) -> Size {
         self.size
     }
 

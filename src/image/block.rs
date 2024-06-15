@@ -3,7 +3,7 @@ use itertools::Itertools;
 use std::sync::Arc;
 
 use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel};
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 
 pub trait IntoSquaredBlocks<I>
 where
@@ -17,8 +17,8 @@ where
     I: Image + Send+Sync,
 {
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>> {
-        assert_eq!(self.get_width() % size, 0);
-        assert_eq!(self.get_height() % size, 0);
+        assert_eq!(self.get_size().width % size, 0);
+        assert_eq!(self.get_size().height % size, 0);
         assert_eq!(self.get_width(), self.get_height());
 
         let x_block = 0..self.get_width() / size;
@@ -43,7 +43,6 @@ where
 pub struct SquaredBlock<I: Image + Send> {
     pub image: Arc<I>,
 
-    #[display(fmt = "{}x{}", _0)]
     pub size: u32,
 
     /// Represents the origin of the block, i.e. the `x` and `y` position in `image` where this block starts.
@@ -61,13 +60,10 @@ impl<I: Image + Send + Sync> SquaredBlock<SquaredBlock<I>> {
 }
 
 impl<I: Image + Send + Sync> Image for SquaredBlock<I> {
-    fn get_width(&self) -> u32 {
-        self.size
+    fn get_size(&self) -> Size {
+        Size::squared(self.size)
     }
 
-    fn get_height(&self) -> u32 {
-        self.size
-    }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {
         assert!(x < self.size);
@@ -84,6 +80,7 @@ impl<I: Image + Send + Sync> IterablePixels for SquaredBlock<I> {
 
 #[cfg(test)]
 mod tests {
+    use std::rc::Rc;
     use crate::testutils::FakeImage;
 
     use super::*;

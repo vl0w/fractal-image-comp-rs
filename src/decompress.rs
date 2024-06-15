@@ -1,7 +1,7 @@
 use crate::image::block::SquaredBlock;
 use crate::image::downscale::IntoDownscaled;
 use crate::image::owned::OwnedImage;
-use crate::image::{Image, IterablePixels, MutableImage};
+use crate::image::{Image, IterablePixels, MutableImage, Size};
 use crate::model::{Compressed, Transformation};
 use crate::preprocessing::SafeableImage;
 use image::ImageFormat;
@@ -11,7 +11,7 @@ use tracing::instrument;
 
 #[instrument(level = "debug", skip(compressed))]
 pub fn decompress(compressed: Compressed, iterations: u8) -> OwnedImage {
-    let mut image = OwnedImage::random(compressed.width, compressed.height);
+    let mut image = OwnedImage::random(Size::new(compressed.width, compressed.height));
 
     for iteration in 0..iterations {
         let previous_pass = Arc::new(image.clone());
