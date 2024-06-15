@@ -76,7 +76,7 @@ fn main() {
             let compressor = if progress {
                 let progress_bar = indicatif::ProgressBar::new(100)
                     .with_message("Mapping blocks")
-                    .with_style(ProgressStyle::with_template("{spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len} ({per_sec}, {eta})")
+                    .with_style(ProgressStyle::with_template("{spinner:.green} {msg} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {human_pos}/{human_len}")
                         .unwrap()
                         .progress_chars("#>-"));
 

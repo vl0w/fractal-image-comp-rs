@@ -1,28 +1,30 @@
-use crate::compress::quadtree::stats::{Stats, StatsReporting};
 use crate::compress::Mapping;
 use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
 use crate::image::Image;
 use crate::model::{Block, Compressed, Transformation};
-use std::collections::VecDeque;
-use std::rc::Rc;
+use rayon::prelude::*;
+use std::sync::Arc;
+use log::warn;
 use tracing::{debug, info, instrument};
 
 pub struct Compressor<I> {
-    image: I,
+    image: Arc<I>,
     error_threshold: ErrorThreshold,
-    progress_fn: Option<Rc<dyn Fn(stats::StatsReporting)>>,
+    progress_fn: Option<Arc<dyn Fn(stats::StatsReporting) + Send + Sync>>,
+    stats: Arc<stats::Stats>,
 }
 
 impl<I> Compressor<I>
 where
-    I: Image,
+    I: Image + Send,
 {
     pub fn new(image: I) -> Self {
         Self {
-            image,
             error_threshold: ErrorThreshold::default(),
             progress_fn: None,
+            stats: Arc::new(stats::Stats::new(image.get_height())),
+            image: Arc::new(image),
         }
     }
 
@@ -35,19 +37,17 @@ where
             "Only square sized images supported"
         );
         info!("Compressing {}x{} image", image_height, image_width);
-        let image = Rc::new(self.image);
 
-        let mut transformations: Vec<Transformation> = Vec::new();
+        let domain_block_size: u32 = self.image.get_height();
+        let range_block_size: u32 = (self.image.get_height() as f64 / 2.0) as u32;
 
-        let domain_block_size: u32 = image.get_height();
-        let range_block_size: u32 = (image.get_height() as f64 / 2.0) as u32;
-
-        let domain_blocks = image.squared_blocks(domain_block_size);
-        let range_blocks = image
+        let domain_blocks = self.image.squared_blocks(domain_block_size);
+        let range_blocks = self
+            .image
             .squared_blocks(range_block_size)
             .into_iter()
-            .map(Rc::new)
-            .collect::<Vec<Rc<_>>>();
+            .map(Arc::new)
+            .collect::<Vec<Arc<_>>>();
 
         debug!(
             "Domain blocks: {} with size {}x{}",
@@ -62,42 +62,43 @@ where
             range_block_size
         );
 
-        let mut stats = Stats::new(image.get_height());
+        range_blocks
+            .par_iter()
+            .map(|rb| self.find_transformations_recursive(rb.clone()))
+            .flatten()
+            .collect::<Vec<Transformation>>()
+            .into()
+    }
 
-        let mut queue = VecDeque::from(range_blocks);
-        while let Some(rb) = queue.pop_front() {
-            debug!(
-                "Finding transformation for range block {} (remaining: {})",
-                rb,
-                queue.len()
-            );
-            match Transformation::find(image.clone(), &rb, self.error_threshold) {
-                Some(transformation) => {
-                    debug!("For range block {}, found best matching domain block", rb);
-                    stats.report_block_mapped(rb.get_height()); // TODO: Only when we have progress!
-                    if let Some(progress_fn) = self.progress_fn.clone() {
-                        progress_fn(stats.report())
-                    }
-                    transformations.push(transformation)
+    fn find_transformations_recursive(&self, rb: Arc<SquaredBlock<I>>) -> Vec<Transformation> {
+        debug!("Finding transformation for range block {}", rb);
+        match Transformation::find(self.image.clone(), &rb, self.error_threshold) {
+            Some(transformation) => {
+                debug!("For range block {}, found best matching domain block", rb);
+
+                if let Some(progress_fn) = self.progress_fn.clone() {
+                    self.stats.report_block_mapped(rb.get_height());
+                    progress_fn(self.stats.report());
                 }
-                None => {
-                    debug!("For range block {}, found no matching domain block", rb);
-                    if rb.get_height() <= 1 {
-                        panic!("Nope"); // TODO
-                    } else {
-                        let new_range_blocks =
-                            rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32);
-                        let new_range_blocks =
-                            new_range_blocks.into_iter().map(|nrb| nrb.flatten());
-                        new_range_blocks
-                            .into_iter()
-                            .for_each(|nrb| queue.push_back(Rc::new(nrb)))
-                    }
+
+                vec![transformation]
+            }
+            None => {
+                debug!("For range block {}, found no matching domain block", rb);
+                if rb.get_height() <= 1 {
+                    warn!("Unable to map range block {}", rb);
+                    vec![]
+                } else {
+                    rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32)
+                        .into_par_iter()
+                        .map(|nrb| nrb.flatten())
+                        .map(Arc::new)
+                        .map(|nrb| self.find_transformations_recursive(nrb))
+                        .flatten()
+                        .collect()
                 }
             }
         }
-
-        transformations.into()
     }
 
     pub fn with_error_threshold(mut self, error_threshold: ErrorThreshold) -> Self {
@@ -105,18 +106,18 @@ where
         self
     }
 
-    pub fn with_progress_reporter<F: Fn(StatsReporting) + 'static>(
+    pub fn with_progress_reporter<F: Fn(stats::StatsReporting) + Send + Sync + 'static>(
         mut self,
         progress_fn: F,
     ) -> Self {
-        self.progress_fn = Some(Rc::new(progress_fn));
+        self.progress_fn = Some(Arc::new(progress_fn));
         self
     }
 }
 
 impl Transformation {
-    fn find<I: Image>(
-        image: Rc<I>,
+    fn find<I: Image + Send>(
+        image: Arc<I>,
         range_block: &SquaredBlock<I>,
         error_threshold: ErrorThreshold,
     ) -> Option<Self> {
@@ -126,20 +127,18 @@ impl Transformation {
         let domain_blocks = image.squared_blocks(domain_block_size);
 
         let mapping = domain_blocks
-            .iter()
+            .par_iter()
             .map(|d| d.downscale_2x2())
             .map(|db| {
                 let mapping = Mapping::compute(&db, range_block);
                 debug!("Mapping: {:?}", mapping);
                 (db, mapping)
             })
-            .filter(|(_, mapping)| match error_threshold {
+            .find_any(|(_, mapping)| match error_threshold {
                 ErrorThreshold::RmsAnyLowerThan(acceptable_error) => {
                     mapping.error < acceptable_error
                 }
-            })
-            .take(1)
-            .next();
+            });
 
         if let Some((db, mapping)) = mapping {
             debug!("Using mapping: {:?}", mapping);
@@ -175,6 +174,7 @@ impl Default for ErrorThreshold {
 }
 
 mod stats {
+    use std::sync::atomic::{AtomicU32, Ordering};
 
     #[derive(Clone, Copy, Debug)]
     pub struct StatsReporting {
@@ -191,24 +191,25 @@ mod stats {
     /// Records the area of the image that has already been mapped
     pub struct Stats {
         pub image_size_squared: u32,
-        pub area_covered: u32,
+        pub area_covered: AtomicU32,
     }
 
     impl Stats {
         pub fn new(image_size: u32) -> Self {
             Self {
                 image_size_squared: image_size * image_size,
-                area_covered: 0,
+                area_covered: AtomicU32::new(0),
             }
         }
 
-        pub fn report_block_mapped(&mut self, range_block_size: u32) {
-            self.area_covered += range_block_size * range_block_size
+        pub fn report_block_mapped(&self, range_block_size: u32) {
+            self.area_covered
+                .fetch_add(range_block_size * range_block_size, Ordering::SeqCst);
         }
 
         pub fn report(&self) -> StatsReporting {
             StatsReporting {
-                area_covered: self.area_covered,
+                area_covered: self.area_covered.load(Ordering::SeqCst),
                 total_area: self.image_size_squared,
             }
         }

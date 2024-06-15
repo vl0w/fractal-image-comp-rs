@@ -6,7 +6,7 @@ use crate::model::{Compressed, Transformation};
 use crate::preprocessing::SafeableImage;
 use image::ImageFormat;
 use std::path::Path;
-use std::rc::Rc;
+use std::sync::Arc;
 use tracing::instrument;
 
 #[instrument(level = "debug", skip(compressed))]
@@ -16,7 +16,7 @@ pub fn decompress(size: u32, compressed: Compressed, iterations: u8) -> OwnedIma
 
     let transformations = compressed.0;
     for iteration in 0..iterations {
-        let previous_pass = Rc::new(image.clone());
+        let previous_pass = Arc::new(image.clone());
         for transformation in transformations.iter() {
             transformation.apply_to(previous_pass.clone(), &mut image);
         }
@@ -28,7 +28,7 @@ pub fn decompress(size: u32, compressed: Compressed, iterations: u8) -> OwnedIma
 }
 
 impl Transformation {
-    fn apply_to(&self, previous_pass: Rc<OwnedImage>, image: &mut OwnedImage) {
+    fn apply_to(&self, previous_pass: Arc<OwnedImage>, image: &mut OwnedImage) {
         let domain_block = SquaredBlock {
             image: previous_pass,
             origin: self.domain.origin,
