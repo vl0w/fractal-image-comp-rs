@@ -10,16 +10,16 @@ pub struct OwnedImage {
 }
 
 impl OwnedImage {
-    pub fn random(size: u32) -> Self {
-        let mut data = Vec::with_capacity((size * size) as usize);
+    pub fn random(width: u32, height: u32) -> Self {
+        let mut data = Vec::with_capacity((width * height) as usize);
 
-        for _ in 0..(size * size) {
+        for _ in 0..(width * height) {
             data.push(thread_rng().gen_range(0..256) as Pixel);
         }
 
         Self {
-            width: size,
-            height: size,
+            width,
+            height,
             data,
         }
     }

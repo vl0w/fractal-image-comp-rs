@@ -116,8 +116,7 @@ fn main() {
         } => {
             let compressed =
                 Compressed::read_from_json(&input_path).expect("Could not read compressed file");
-            // TODO: No -> Size needs to be part of Compressed!
-            let image = decompress::decompress(compressed.0[0].domain.image_size, compressed, iterations);
+            let image = decompress::decompress(compressed, iterations);
             image.save_image_as_png(&output_path);
         }
     }

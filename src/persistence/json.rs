@@ -31,12 +31,10 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
         .map(|x| model::Transformation {
             range: model::Block {
                 block_size: x.range.size,
-                image_size: contents.size,
                 origin: coords!(x.range.x, x.range.y),
             },
             domain: model::Block {
                 block_size: x.domain.size,
-                image_size: contents.size,
                 origin: coords!(x.domain.x, x.domain.y),
             },
             brightness: x.brightness,
@@ -44,23 +42,30 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
         })
         .collect();
 
-    Ok(model::Compressed(transformations))
+    Ok(model::Compressed {
+        width: contents.width,
+        height: contents.height,
+        transformations,
+    })
 }
 
 #[derive(Serialize, Deserialize)]
 struct Contents {
-    size: u32,
+    width: u32,
+    height: u32,
     mappings: Vec<Mapping>,
 }
 
 impl From<model::Compressed> for Contents {
-    fn from(value: model::Compressed) -> Self {
-        let transformations = value.0;
-        // TODO: No!
-        let image_size = transformations[0].domain.image_size;
+    fn from(compressed: model::Compressed) -> Self {
         Self {
-            size: image_size,
-            mappings: transformations.into_iter().map(Mapping::from).collect(),
+            width: compressed.width,
+            height: compressed.height,
+            mappings: compressed
+                .transformations
+                .into_iter()
+                .map(Mapping::from)
+                .collect(),
         }
     }
 }

@@ -1,7 +1,7 @@
 use crate::image::block::SquaredBlock;
 use crate::image::downscale::IntoDownscaled;
 use crate::image::owned::OwnedImage;
-use crate::image::{IterablePixels, MutableImage};
+use crate::image::{Image, IterablePixels, MutableImage};
 use crate::model::{Compressed, Transformation};
 use crate::preprocessing::SafeableImage;
 use image::ImageFormat;
@@ -10,14 +10,12 @@ use std::sync::Arc;
 use tracing::instrument;
 
 #[instrument(level = "debug", skip(compressed))]
-pub fn decompress(size: u32, compressed: Compressed, iterations: u8) -> OwnedImage {
-    // Make image
-    let mut image = OwnedImage::random(size);
+pub fn decompress(compressed: Compressed, iterations: u8) -> OwnedImage {
+    let mut image = OwnedImage::random(compressed.width, compressed.height);
 
-    let transformations = compressed.0;
     for iteration in 0..iterations {
         let previous_pass = Arc::new(image.clone());
-        for transformation in transformations.iter() {
+        for transformation in compressed.transformations.iter() {
             transformation.apply_to(previous_pass.clone(), &mut image);
         }
         let filename = format!("decompressed_{}.png", iteration);
@@ -36,7 +34,7 @@ impl Transformation {
         };
 
         let domain_block = domain_block.downscale_2x2();
-        let indices = self.range.indices();
+        let indices = self.range.indices(image.get_width(), image.get_height());
 
         for ((_, coords), db_pixel) in indices.zip(domain_block.pixels()) {
             let new_pixel_value: f64 = db_pixel as f64 * self.saturation + self.brightness as f64;

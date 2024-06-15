@@ -3,9 +3,9 @@ use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
 use crate::image::Image;
 use crate::model::{Block, Compressed, Transformation};
+use log::warn;
 use rayon::prelude::*;
 use std::sync::Arc;
-use log::warn;
 use tracing::{debug, info, instrument};
 
 pub struct Compressor<I> {
@@ -62,12 +62,17 @@ where
             range_block_size
         );
 
-        range_blocks
+        let transformations = range_blocks
             .par_iter()
             .map(|rb| self.find_transformations_recursive(rb.clone()))
             .flatten()
-            .collect::<Vec<Transformation>>()
-            .into()
+            .collect::<Vec<Transformation>>();
+
+        Compressed {
+            width: image_width,
+            height: image_height,
+            transformations,
+        }
     }
 
     fn find_transformations_recursive(&self, rb: Arc<SquaredBlock<I>>) -> Vec<Transformation> {
@@ -145,12 +150,10 @@ impl Transformation {
             return Some(Self {
                 range: Block {
                     block_size: range_block.size,
-                    image_size: image.get_height(),
                     origin: range_block.origin,
                 },
                 domain: Block {
                     block_size: db.inner().size,
-                    image_size: image.get_height(),
                     origin: db.inner().origin,
                 },
                 brightness: mapping.brightness,

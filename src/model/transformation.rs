@@ -7,12 +7,3 @@ pub struct Transformation {
     pub brightness: i16,
     pub saturation: f64,
 }
-
-#[derive(Debug, Clone)]
-pub struct Compressed(pub Vec<Transformation>);
-
-impl From<Vec<Transformation>> for Compressed {
-    fn from(value: Vec<Transformation>) -> Self {
-        Self(value)
-    }
-}

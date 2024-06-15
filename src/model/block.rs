@@ -6,18 +6,20 @@ use crate::image::Coords;
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 pub struct Block {
     pub block_size: u32,
-    pub image_size: u32,
     pub origin: Coords,
 }
 
 impl Block {
-    pub fn indices(&self) -> impl Iterator<Item = (usize, Coords)> {
+    pub fn indices(
+        &self,
+        image_width: u32,
+        image_height: u32,
+    ) -> impl Iterator<Item = (usize, Coords)> {
         let mut indices: Vec<(usize, Coords)> = Vec::with_capacity(self.block_size.pow(2) as usize);
         for i in 0..self.block_size {
             for j in 0..self.block_size {
                 let index =
-                    (self.origin.y * self.image_size + self.origin.x + self.image_size * i + j)
-                        as usize;
+                    (self.origin.y * image_width + self.origin.x + image_height * i + j) as usize;
                 indices.push((index, coords!(self.origin.x + j, self.origin.y + i)))
             }
         }
@@ -46,7 +48,6 @@ mod tests {
 
         let block = Block {
             block_size: 3,
-            image_size: 10,
             origin: coords!(2, 3),
         };
 
@@ -62,7 +63,7 @@ mod tests {
                 (53, coords!(3, 5)),
                 (54, coords!(4, 5))
             ],
-            block.indices().collect::<Vec<_>>()
+            block.indices(10,10).collect::<Vec<_>>()
         );
     }
 }
