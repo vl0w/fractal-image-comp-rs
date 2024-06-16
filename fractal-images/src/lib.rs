@@ -4,4 +4,5 @@ pub mod image;
 pub mod model;
 mod persistence;
 pub mod preprocessing;
+#[cfg(test)]
 mod testutils;
