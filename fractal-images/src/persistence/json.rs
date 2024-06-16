@@ -37,6 +37,9 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
                 block_size: x.domain.size,
                 origin: coords!(x.domain.x, x.domain.y),
             },
+            // TODO: Not nice
+            rotation: crate::image::rotate::Rotation::try_from(x.rotation.0)
+                .expect("Could not load rotation"),
             brightness: x.brightness,
             saturation: x.saturation,
         })
@@ -74,6 +77,7 @@ impl From<model::Compressed> for Contents {
 struct Mapping {
     domain: Block,
     range: Block,
+    rotation: Rotation,
     brightness: i16,
     saturation: f64,
 }
@@ -83,6 +87,7 @@ impl From<model::Transformation> for Mapping {
         Self {
             domain: Block::from(value.domain),
             range: Block::from(value.range),
+            rotation: Rotation::from(value.rotation),
             brightness: value.brightness,
             saturation: value.saturation,
         }
@@ -103,5 +108,19 @@ impl From<model::Block> for Block {
             x: value.origin.x,
             y: value.origin.y,
         }
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+struct Rotation(u8);
+
+impl From<crate::image::rotate::Rotation> for Rotation {
+    fn from(value: crate::image::rotate::Rotation) -> Self {
+        Self(match value {
+            crate::image::rotate::Rotation::By0 => 0,
+            crate::image::rotate::Rotation::By90 => 1,
+            crate::image::rotate::Rotation::By180 => 2,
+            crate::image::rotate::Rotation::By270 => 3,
+        })
     }
 }

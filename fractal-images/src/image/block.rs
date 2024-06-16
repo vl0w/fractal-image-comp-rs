@@ -14,7 +14,7 @@ where
 
 impl<I> IntoSquaredBlocks<I> for Arc<I>
 where
-    I: Image + Send+Sync,
+    I: Image + Send + Sync,
 {
     fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>> {
         assert_eq!(self.get_size().width % size, 0);
@@ -40,13 +40,23 @@ where
 
 #[derive(Display)]
 #[display(fmt = "Block² {} {}", size, origin)]
-pub struct SquaredBlock<I: Image + Send> {
+pub struct SquaredBlock<I> {
     pub image: Arc<I>,
 
     pub size: u32,
 
     /// Represents the origin of the block, i.e. the `x` and `y` position in `image` where this block starts.
     pub origin: Coords,
+}
+
+impl<I> Clone for SquaredBlock<I> {
+    fn clone(&self) -> Self {
+        Self {
+            image: self.image.clone(),
+            size: self.size,
+            origin: self.origin,
+        }
+    }
 }
 
 impl<I: Image + Send + Sync> SquaredBlock<SquaredBlock<I>> {
@@ -63,7 +73,6 @@ impl<I: Image + Send + Sync> Image for SquaredBlock<I> {
     fn get_size(&self) -> Size {
         Size::squared(self.size)
     }
-
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {
         assert!(x < self.size);

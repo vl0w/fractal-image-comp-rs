@@ -1,4 +1,3 @@
-use crate::compress::quadtree::ErrorThreshold;
 use clap::{ArgAction, Parser, Subcommand};
 use indicatif::ProgressStyle;
 use std::ffi::OsStr;
@@ -7,17 +6,10 @@ use tracing::info;
 use tracing_subscriber::fmt::format::FmtSpan;
 use tracing_subscriber::EnvFilter;
 
-use crate::image::Image;
-use crate::model::Compressed;
-use crate::preprocessing::{SafeableImage, SquaredGrayscaleImage};
-
-mod compress;
-mod decompress;
-mod image;
-mod model;
-mod persistence;
-mod preprocessing;
-mod testutils;
+use fractal_image::image::Image;
+use fractal_image::model::Compressed;
+use fractal_image::preprocessing::{SafeableImage, SquaredGrayscaleImage};
+use fractal_image::{compress, decompress};
 
 #[derive(Parser)]
 #[command(version, about, long_about = None)]
@@ -101,8 +93,9 @@ fn main() {
             };
 
             let compressor = if let Some(rms_error_threshold) = rms_error_threshold {
-                compressor
-                    .with_error_threshold(ErrorThreshold::RmsAnyLowerThan(rms_error_threshold))
+                compressor.with_error_threshold(
+                    compress::quadtree::ErrorThreshold::RmsAnyLowerThan(rms_error_threshold),
+                )
             } else {
                 compressor
             };
