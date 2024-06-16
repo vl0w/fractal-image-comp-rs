@@ -2,6 +2,7 @@ use crate::compress::Mapping;
 use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
 use crate::image::downscale::IntoDownscaled;
 use crate::image::Image;
+use crate::image::rotate::IntoRotated;
 use crate::model::{Block, Compressed, Transformation};
 use log::warn;
 use rayon::prelude::*;
@@ -129,11 +130,14 @@ impl Transformation {
         let range_block_size = range_block.size;
         let domain_block_size = 2 * range_block_size;
 
+        let image = Arc::new(image);
         let domain_blocks = image.squared_blocks(domain_block_size);
 
         let mapping = domain_blocks
-            .par_iter()
+            .into_par_iter()
             .map(|d| d.downscale_2x2())
+            .map(|d| d.all_rotations())
+            .flatten()
             .map(|db| {
                 let mapping = Mapping::compute(&db, range_block);
                 debug!("Mapping: {:?}", mapping);
@@ -153,9 +157,10 @@ impl Transformation {
                     origin: range_block.origin,
                 },
                 domain: Block {
-                    block_size: db.inner().size,
-                    origin: db.inner().origin,
+                    block_size: db.inner().inner().size,
+                    origin: db.inner().inner().origin,
                 },
+                rotation: db.rotation,
                 brightness: mapping.brightness,
                 saturation: mapping.saturation,
             });

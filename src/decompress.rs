@@ -5,6 +5,7 @@ use crate::image::{Image, IterablePixels, MutableImage, Size};
 use crate::model::{Compressed, Transformation};
 use std::sync::Arc;
 use tracing::instrument;
+use crate::image::rotate::IntoRotated;
 
 #[derive(Debug)]
 pub struct Options {
@@ -51,7 +52,7 @@ impl Transformation {
             size: self.domain.block_size,
         };
 
-        let domain_block = domain_block.downscale_2x2();
+        let domain_block = domain_block.downscale_2x2().rot(self.rotation);
         let indices = self.range.indices(image.get_width(), image.get_height());
 
         for ((_, coords), db_pixel) in indices.zip(domain_block.pixels()) {

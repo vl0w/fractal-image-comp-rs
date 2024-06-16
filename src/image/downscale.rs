@@ -1,33 +1,55 @@
 use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
+use std::sync::Arc;
 
-pub trait IntoDownscaled<'a, I>
+pub trait IntoDownscaled<I>
 where
-    I: Image + 'a,
+    I: Image,
 {
-    fn downscale_2x2(&'a self) -> Downscaled2x2<'a, I>;
+    fn downscale_2x2(self) -> Downscaled2x2<I>;
 }
 
-impl<'a, I> IntoDownscaled<'a, I> for I
+impl<I> IntoDownscaled<I> for I
 where
-    I: Image + 'a,
+    I: Image,
 {
-    fn downscale_2x2(&'a self) -> Downscaled2x2<'a, I> {
-        Downscaled2x2 { image: self }
+    fn downscale_2x2(self) -> Downscaled2x2<I> {
+        Downscaled2x2 {
+            image: Arc::new(self),
+        }
     }
 }
 
-pub struct Downscaled2x2<'a, I: Image> {
-    image: &'a I,
-}
-
-impl<'a, I: Image> Downscaled2x2<'a, I> {
-    pub fn inner(&self) -> &'a I {
-        self.image
+impl<I> IntoDownscaled<I> for Arc<I>
+where
+    I: Image,
+{
+    fn downscale_2x2(self) -> Downscaled2x2<I> {
+        Downscaled2x2 {
+            image: self.clone(),
+        }
     }
 }
 
-impl<'a, I: Image> Image for Downscaled2x2<'a, I> {
+pub struct Downscaled2x2<I> {
+    image: Arc<I>,
+}
+
+impl<I> Clone for Downscaled2x2<I> {
+    fn clone(&self) -> Self {
+        Self {
+            image: self.image.clone(),
+        }
+    }
+}
+
+impl<I: Image> Downscaled2x2<I> {
+    pub fn inner(&self) -> Arc<I> {
+        self.image.clone()
+    }
+}
+
+impl<I: Image> Image for Downscaled2x2<I> {
     fn get_size(&self) -> Size {
         self.image.get_size() / 2
     }
@@ -41,7 +63,7 @@ impl<'a, I: Image> Image for Downscaled2x2<'a, I> {
     }
 }
 
-impl<'a, I: Image> IterablePixels for Downscaled2x2<'a, I> {
+impl<I: Image> IterablePixels for Downscaled2x2<I> {
     fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
         PixelIterator::new(self)
     }

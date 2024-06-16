@@ -4,7 +4,7 @@ use std::ops::{Add, Div, Mul};
 pub mod block;
 pub mod downscale;
 pub mod owned;
-mod rotate;
+pub mod rotate;
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;

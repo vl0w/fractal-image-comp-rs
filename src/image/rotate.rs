@@ -1,37 +1,68 @@
-use crate::image::{Image, Pixel, Size};
+use crate::image::iter::PixelIterator;
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
+use std::convert::TryFrom;
+use std::sync::Arc;
 
-pub trait IntoRotated<'a, I> {
-    fn rot(&'a self, rotation: Rotation) -> Rotated<'a, I>;
+pub trait IntoRotated<I>
+where
+    Self: Sized,
+{
+    fn rot(self, rotation: Rotation) -> Rotated<I>;
 
-    fn rot_0(&'a self) -> Rotated<'a, I> {
+    fn rot_0(self) -> Rotated<I> {
         self.rot(Rotation::By0)
     }
 
-    fn rot_90(&'a self) -> Rotated<'a, I> {
+    fn rot_90(self) -> Rotated<I> {
         self.rot(Rotation::By90)
     }
 
-    fn rot_180(&'a self) -> Rotated<'a, I> {
+    fn rot_180(self) -> Rotated<I> {
         self.rot(Rotation::By180)
     }
 
-    fn rot_270(&'a self) -> Rotated<'a, I> {
+    fn rot_270(self) -> Rotated<I> {
         self.rot(Rotation::By270)
+    }
+
+    fn all_rotations(self) -> Vec<Rotated<I>>
+    where
+        Self: Clone,
+    {
+        vec![
+            self.clone().rot_0(),
+            self.clone().rot_90(),
+            self.clone().rot_180(),
+            self.clone().rot_270(),
+        ]
     }
 }
 
-impl<'a, I> IntoRotated<'a, I> for I
+impl<I> IntoRotated<I> for I
 where
-    I: Image + 'a,
+    I: Image,
 {
-    fn rot(&'a self, rotation: Rotation) -> Rotated<'a, I> {
+    fn rot(self, rotation: Rotation) -> Rotated<I> {
         Rotated {
-            image: self,
+            image: Arc::new(self),
             rotation,
         }
     }
 }
 
+impl<I> IntoRotated<I> for Arc<I>
+where
+    I: Image,
+{
+    fn rot(self, rotation: Rotation) -> Rotated<I> {
+        Rotated {
+            image: self.clone(),
+            rotation,
+        }
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
 pub enum Rotation {
     By0,
     By90,
@@ -39,14 +70,35 @@ pub enum Rotation {
     By270,
 }
 
-pub struct Rotated<'a, I> {
-    image: &'a I,
-    rotation: Rotation,
+impl TryFrom<u8> for Rotation {
+    type Error = &'static str;
+
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0 => Ok(Rotation::By0),
+            1 => Ok(Rotation::By90),
+            2 => Ok(Rotation::By180),
+            3 => Ok(Rotation::By270),
+            _ => Err("Invalid value for Rotation"),
+        }
+    }
 }
 
-impl<'a, I> Image for Rotated<'a, I>
+#[derive(Clone)]
+pub struct Rotated<I> {
+    image: Arc<I>,
+    pub rotation: Rotation,
+}
+
+impl<I> Rotated<I> {
+    pub fn inner(&self) -> Arc<I> {
+        self.image.clone()
+    }
+}
+
+impl<I> Image for Rotated<I>
 where
-    I: Image + 'a,
+    I: Image,
 {
     fn get_size(&self) -> Size {
         self.image.get_size()
@@ -61,6 +113,15 @@ where
                 .pixel(self.get_width() - 1 - x, self.get_height() - 1 - y),
             Rotation::By270 => self.image.pixel(self.get_height() - 1 - y, x),
         }
+    }
+}
+
+impl<I> IterablePixels for Rotated<I>
+where
+    I: Image,
+{
+    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
+        PixelIterator::new(self)
     }
 }
 
