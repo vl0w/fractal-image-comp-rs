@@ -1,6 +1,6 @@
 use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
-use std::convert::TryFrom;
+use crate::model::Rotation;
 use std::sync::Arc;
 
 pub trait IntoRotated<I>
@@ -58,28 +58,6 @@ where
         Rotated {
             image: self.clone(),
             rotation,
-        }
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub enum Rotation {
-    By0,
-    By90,
-    By180,
-    By270,
-}
-
-impl TryFrom<u8> for Rotation {
-    type Error = &'static str;
-
-    fn try_from(value: u8) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Rotation::By0),
-            1 => Ok(Rotation::By90),
-            2 => Ok(Rotation::By180),
-            3 => Ok(Rotation::By270),
-            _ => Err("Invalid value for Rotation"),
         }
     }
 }

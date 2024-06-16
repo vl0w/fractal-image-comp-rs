@@ -17,6 +17,7 @@ pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, Serializatio
     let serialized = serde_json::to_string(&contents)?;
     Ok(serialized.into_bytes())
 }
+
 #[derive(Error, Debug)]
 pub enum DeserializationError {
     #[error("An error occurred while deserializing: {0}")]
@@ -37,9 +38,8 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
                 block_size: x.domain.size,
                 origin: coords!(x.domain.x, x.domain.y),
             },
-            // TODO: Not nice
-            rotation: crate::image::rotate::Rotation::try_from(x.rotation.0)
-                .expect("Could not load rotation"),
+            rotation: model::Rotation::try_from(x.rotation.0)
+                .unwrap_or(model::Rotation::By0),
             brightness: x.brightness,
             saturation: x.saturation,
         })
@@ -114,13 +114,8 @@ impl From<model::Block> for Block {
 #[derive(Serialize, Deserialize)]
 struct Rotation(u8);
 
-impl From<crate::image::rotate::Rotation> for Rotation {
-    fn from(value: crate::image::rotate::Rotation) -> Self {
-        Self(match value {
-            crate::image::rotate::Rotation::By0 => 0,
-            crate::image::rotate::Rotation::By90 => 1,
-            crate::image::rotate::Rotation::By180 => 2,
-            crate::image::rotate::Rotation::By270 => 3,
-        })
+impl From<model::Rotation> for Rotation {
+    fn from(value: model::Rotation) -> Self {
+        Self(value.try_into().unwrap_or(0))
     }
 }

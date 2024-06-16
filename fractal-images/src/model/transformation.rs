@@ -1,5 +1,4 @@
-use crate::image::rotate::Rotation;
-use crate::model::Block;
+use crate::model::{Block, Rotation};
 
 #[derive(Copy, Clone, Debug)]
 pub struct Transformation {
