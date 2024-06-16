@@ -76,10 +76,9 @@ mod tests {
 
     #[test]
     fn downscaled_size() {
-        let image = FakeImage::new(16, 16);
-        let scaled = image.downscale_2x2();
-        assert_eq!(scaled.get_width(), 8);
-        assert_eq!(scaled.get_height(), 8);
+        let image = FakeImage::new(16, 16).downscale_2x2();
+        assert_eq!(image.get_width(), 8);
+        assert_eq!(image.get_height(), 8);
     }
 
     #[test]
@@ -90,27 +89,24 @@ mod tests {
         // 8  9  10 11
         // 12 13 14 15
 
-        let image = FakeImage::new(4, 4);
-        let scaled = image.downscale_2x2();
-        assert_eq!(scaled.pixel(0, 0), (1 + 4 + 5) / 4);
-        assert_eq!(scaled.pixel(1, 0), (2 + 3 + 6 + 7) / 4);
-        assert_eq!(scaled.pixel(0, 1), (8 + 9 + 12 + 13) / 4);
-        assert_eq!(scaled.pixel(1, 1), (10 + 11 + 14 + 15) / 4);
+        let image = FakeImage::new(4, 4).downscale_2x2();
+        assert_eq!(image.pixel(0, 0), (1 + 4 + 5) / 4);
+        assert_eq!(image.pixel(1, 0), (2 + 3 + 6 + 7) / 4);
+        assert_eq!(image.pixel(0, 1), (8 + 9 + 12 + 13) / 4);
+        assert_eq!(image.pixel(1, 1), (10 + 11 + 14 + 15) / 4);
     }
 
     #[test]
     #[should_panic]
     fn overflow_x() {
-        let image = FakeImage::new(4, 4);
-        let scaled = image.downscale_2x2();
-        scaled.pixel(2, 0);
+        let image = FakeImage::new(4, 4).downscale_2x2();
+        image.pixel(2, 0);
     }
 
     #[test]
     #[should_panic]
     fn overflow_y() {
-        let image = FakeImage::new(4, 4);
-        let scaled = image.downscale_2x2();
-        scaled.pixel(0, 2);
+        let image = FakeImage::new(4, 4).downscale_2x2();
+        image.pixel(0, 2);
     }
 }
