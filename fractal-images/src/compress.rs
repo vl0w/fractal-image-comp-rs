@@ -11,7 +11,7 @@ struct Mapping {
 }
 
 impl Mapping {
-    fn compute<A, B>(domain: &A, range: &B) -> Self
+    fn compute<A, B>(domain: &A, range: &B) -> Option<Self>
     where
         A: Image + IterablePixels,
         B: Image + IterablePixels,
@@ -21,54 +21,52 @@ impl Mapping {
 
         let n: f64 = (domain.get_width() * domain.get_height()) as f64; // amount of pixels
 
-        let a = domain.pixels().map(|x| x as f64);
-        let b = range.pixels().map(|x| x as f64);
-        let a_times_b_sum: f64 = a.zip(b).map(|(a, b)| a * b).sum();
-
-        let a = domain.pixels().map(|x| x as f64);
-        let b = range.pixels().map(|x| x as f64);
-        let a_squared_sum: f64 = a.map(|x| x * x).sum();
-        let b_squared_sum: f64 = b.map(|x| x * x).sum();
-
-        let a = domain.pixels().map(|x| x as f64);
-        let b = range.pixels().map(|x| x as f64);
-        let a_sum: f64 = a.sum();
-        let b_sum: f64 = b.sum();
-        let a_sum_squared = a_sum.powi(2);
+        let (mut domain_times_range_sum, mut domain_squared_sum, mut range_squared_sum, mut domain_sum, mut range_sum) =
+            (0.0, 0.0, 0.0, 0.0, 0.0);
+        for (dp, rp) in domain.pixels().zip(range.pixels()) {
+            let dp = dp as f64;
+            let rp = rp as f64;
+            domain_times_range_sum += dp * rp;
+            domain_squared_sum += dp * dp;
+            range_squared_sum += rp * rp;
+            domain_sum += dp;
+            range_sum += rp;
+        }
+        let domain_sum_squared = domain_sum * domain_sum;
 
         // Compute s (saturation)
-        let denominator = n * a_squared_sum - a_sum_squared;
-        let s = match denominator {
+        let denominator = n * domain_squared_sum - domain_sum_squared;
+        let saturation = match denominator {
             0.0 => 0.0,
-            _ => (n * a_times_b_sum - a_sum * b_sum) / denominator,
+            _ => (n * domain_times_range_sum - domain_sum * range_sum) / denominator,
         };
 
         // Compute o (brightness)
-        let o = match denominator {
-            0.0 => b_sum / n,
-            _ => (b_sum - s * a_sum) / n,
-        };
+        let brightness = match denominator {
+            0.0 => range_sum / n,
+            _ => (range_sum - saturation * domain_sum) / n,
+        }.clamp(0.0, 255.0);
 
         // Squared error
-        let r = (b_squared_sum
-            + s * (s * a_squared_sum - 2.0 * a_times_b_sum + 2.0 * o * a_sum)
-            + o * (n * o - 2.0 * b_sum))
+        let error = (range_squared_sum
+            + saturation * (saturation * domain_squared_sum - 2.0 * domain_times_range_sum + 2.0 * brightness * domain_sum)
+            + brightness * (n * brightness - 2.0 * range_sum))
             / n;
 
-        let rms_error = if s.abs() > 1.0 {
-            f64::MAX
+        let rms_error = if saturation.abs() > 1.0 {
+            return None;
         } else {
-            r.sqrt()
+            error.sqrt()
         };
 
-        trace!("saturation = {}", s);
-        trace!("brightness = {}", o);
+        trace!("saturation = {}", saturation);
+        trace!("brightness = {}", brightness);
         trace!("RMS error = {}", rms_error);
 
-        Self {
+        Some(Self {
             error: rms_error,
-            brightness: (o as i16).clamp(0, 256),
-            saturation: s,
-        }
+            brightness: brightness as i16,
+            saturation,
+        })
     }
 }

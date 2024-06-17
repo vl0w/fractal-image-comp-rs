@@ -143,6 +143,8 @@ impl Transformation {
                 debug!("Mapping: {:?}", mapping);
                 (db, mapping)
             })
+            .filter(|(_, mapping)| mapping.is_some())
+            .map(|(db, mapping)| (db, mapping.unwrap()))
             .find_any(|(_, mapping)| match error_threshold {
                 ErrorThreshold::RmsAnyLowerThan(acceptable_error) => {
                     mapping.error < acceptable_error
