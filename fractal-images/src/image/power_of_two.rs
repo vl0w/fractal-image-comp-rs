@@ -2,6 +2,37 @@ use std::ops::Deref;
 use thiserror::Error;
 use crate::image::Image;
 
+/// Represents an image with dimensions that are powers of two.
+///
+/// Wraps an image object with the additional constraint that both the width and
+/// the height of the image are powers of two. This struct does not provide
+/// any additional logic, but rather validates that the underlying image
+/// dimensions conform to the power of two requirement.
+///
+/// # Usage
+///
+/// This struct is useful to ensure compile-time guarantees that the
+/// dimensions of the contained image are powers of two.
+///
+/// # Examples
+/// ```rust
+/// use fractal_image::image::{Image, fake::FakeImage, power_of_two::PowerOfTwo, Size};
+/// use fractal_image::size;
+///
+/// assert!(PowerOfTwo::new(
+///     FakeImage::new(size!(width=4, height=16))
+/// ).is_ok());
+/// assert!(PowerOfTwo::new(
+///     FakeImage::new(size!(width=3, height=4))
+/// ).is_err());
+/// assert!(PowerOfTwo::new(
+///     FakeImage::new(size!(width=32, height=10))
+/// ).is_err());
+/// assert!(PowerOfTwo::new(
+///     FakeImage::new(size!(width=13, height=21))
+/// ).is_err());
+/// ```
+///
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct PowerOfTwo<I> (I);
 
