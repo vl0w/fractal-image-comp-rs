@@ -1,13 +1,21 @@
 use derive_more::Display;
 use std::ops::{Add, Div, Mul};
 
-pub mod block;
-pub mod downscale;
-pub mod owned;
-pub mod rotate;
-pub mod square;
-pub mod fake;
-pub mod power_of_two;
+mod block;
+mod downscale;
+mod owned;
+mod rotate;
+mod square;
+mod fake;
+mod power_of_two;
+
+pub use block::*;
+pub use downscale::*;
+pub use owned::*;
+pub use rotate::*;
+pub use square::*;
+pub use fake::*;
+pub use power_of_two::*;
 
 
 /// A representation for a gray scale pixel value

@@ -3,10 +3,10 @@ use std::sync::Arc;
 use tracing::instrument;
 
 use crate::image::{Image, IterablePixels, MutableImage};
-use crate::image::block::SquaredBlock;
-use crate::image::downscale::IntoDownscaled;
-use crate::image::owned::OwnedImage;
-use crate::image::rotate::IntoRotated;
+use crate::image::SquaredBlock;
+use crate::image::IntoDownscaled;
+use crate::image::OwnedImage;
+use crate::image::IntoRotated;
 use crate::model::{Compressed, Transformation};
 
 #[derive(Debug)]

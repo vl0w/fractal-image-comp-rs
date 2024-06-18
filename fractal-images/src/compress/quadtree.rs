@@ -1,8 +1,8 @@
 use crate::compress::Mapping;
-use crate::image::block::{IntoSquaredBlocks, SquaredBlock};
-use crate::image::downscale::IntoDownscaled;
+use crate::image::{IntoSquaredBlocks, SquaredBlock};
+use crate::image::IntoDownscaled;
 use crate::image::Image;
-use crate::image::rotate::IntoRotated;
+use crate::image::IntoRotated;
 use crate::model::{Block, Compressed, Transformation};
 use log::warn;
 use rayon::prelude::*;

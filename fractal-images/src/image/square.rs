@@ -13,7 +13,7 @@ use crate::image::Image;
 ///
 /// # Examples
 /// ```rust
-/// use fractal_image::image::{Image, fake::FakeImage, square::Square};
+/// use fractal_image::image::{Image, FakeImage, Square};
 ///
 /// let image: Square<FakeImage> = FakeImage::squared(4);
 ///

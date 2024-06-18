@@ -16,7 +16,7 @@ use crate::image::Image;
 ///
 /// # Examples
 /// ```rust
-/// use fractal_image::image::{Image, fake::FakeImage, power_of_two::PowerOfTwo, Size};
+/// use fractal_image::image::{Image, FakeImage, PowerOfTwo, Size};
 /// use fractal_image::size;
 ///
 /// assert!(PowerOfTwo::new(
