@@ -107,7 +107,7 @@ where
 mod tests {
     use crate::image::rotate::IntoRotated;
     use crate::image::{Image, Size};
-    use crate::testutils::FakeImage;
+    use crate::image::fake::FakeImage;
 
     #[test]
     fn rotate_squared_by_0() {

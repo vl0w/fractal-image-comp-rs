@@ -1,42 +1,9 @@
 use derive_more::Display;
-use itertools::Itertools;
 use std::sync::Arc;
+pub use conversion::*;
 
 use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
-
-pub trait IntoSquaredBlocks<I>
-where
-    I: Image + Send + Sync,
-{
-    fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>>;
-}
-
-impl<I> IntoSquaredBlocks<I> for Arc<I>
-where
-    I: Image + Send + Sync,
-{
-    fn squared_blocks(&self, size: u32) -> Vec<SquaredBlock<I>> {
-        assert_eq!(self.get_size().width % size, 0);
-        assert_eq!(self.get_size().height % size, 0);
-        assert_eq!(self.get_width(), self.get_height());
-
-        let x_block = 0..self.get_width() / size;
-        let y_block = 0..self.get_height() / size;
-
-        x_block
-            .cartesian_product(y_block)
-            .map(move |(x, y)| SquaredBlock {
-                size,
-                origin: Coords {
-                    x: size * y,
-                    y: size * x,
-                },
-                image: self.clone(),
-            })
-            .collect()
-    }
-}
 
 #[derive(Display)]
 #[display(fmt = "Block² {} {}", size, origin)]
@@ -59,7 +26,7 @@ impl<I> Clone for SquaredBlock<I> {
     }
 }
 
-impl<I: Image + Send + Sync> SquaredBlock<SquaredBlock<I>> {
+impl<I: Image> SquaredBlock<SquaredBlock<I>> {
     pub fn flatten(self) -> SquaredBlock<I> {
         SquaredBlock {
             image: self.image.image.clone(),
@@ -69,7 +36,7 @@ impl<I: Image + Send + Sync> SquaredBlock<SquaredBlock<I>> {
     }
 }
 
-impl<I: Image + Send + Sync> Image for SquaredBlock<I> {
+impl<I: Image> Image for SquaredBlock<I> {
     fn get_size(&self) -> Size {
         Size::squared(self.size)
     }
@@ -82,41 +49,95 @@ impl<I: Image + Send + Sync> Image for SquaredBlock<I> {
 }
 
 impl<I: Image + Send + Sync> IterablePixels for SquaredBlock<I> {
-    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
         PixelIterator::new(self)
+    }
+}
+
+/// Logic to turn something into [SquaredBlock]s.
+mod conversion {
+    use std::sync::Arc;
+    use itertools::Itertools;
+    use crate::image::block::SquaredBlock;
+    use crate::image::{Coords, Image};
+
+    pub trait IntoSquaredBlocks<I>
+    where
+        I: Image + Send + Sync,
+    {
+        fn squared_blocks(self, size: u32) -> Vec<SquaredBlock<I>>;
+    }
+
+    impl<I> IntoSquaredBlocks<I> for I
+    where
+        I: Image,
+    {
+        fn squared_blocks(self, size: u32) -> Vec<SquaredBlock<I>> {
+            create_squared_blocks(Arc::new(self), size)
+        }
+    }
+
+    impl<I> IntoSquaredBlocks<I> for &Arc<I>
+    where
+        I: Image + Send + Sync,
+    {
+        fn squared_blocks(self, size: u32) -> Vec<SquaredBlock<I>> {
+            create_squared_blocks(self.clone(), size)
+        }
+    }
+
+    fn create_squared_blocks<I: Image>(image: Arc<I>, size: u32) -> Vec<SquaredBlock<I>> {
+        assert_eq!(image.get_size().width % size, 0);
+        assert_eq!(image.get_size().height % size, 0);
+        assert_eq!(image.get_width(), image.get_height());
+
+        let x_block = 0..image.get_width() / size;
+        let y_block = 0..image.get_height() / size;
+
+        x_block
+            .cartesian_product(y_block)
+            .map(move |(x, y)| SquaredBlock {
+                size,
+                origin: Coords {
+                    x: size * y,
+                    y: size * x,
+                },
+                image: Arc::clone(&image),
+            })
+            .collect()
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::testutils::FakeImage;
+    use crate::image::fake::FakeImage;
 
     use super::*;
 
     #[test]
     #[should_panic]
     fn misaligned_block_size() {
-        let _ = FakeImage::new(16, 16).squared_blocks(5);
+        let _ = FakeImage::squared(16).squared_blocks(5);
     }
 
     #[test]
     #[should_panic]
     fn no_square_image() {
-        let _ = FakeImage::new(16, 32).squared_blocks(4);
+        let _ = FakeImage::new(Size::new(16, 32)).squared_blocks(4);
     }
 
     #[test]
     fn amount_of_blocks() {
-        assert_eq!(FakeImage::new(16, 16).squared_blocks(16).len(), 1);
-        assert_eq!(FakeImage::new(16, 16).squared_blocks(8).len(), 2 * 2);
-        assert_eq!(FakeImage::new(16, 16).squared_blocks(4).len(), 4 * 4);
-        assert_eq!(FakeImage::new(16, 16).squared_blocks(2).len(), 8 * 8);
-        assert_eq!(FakeImage::new(16, 16).squared_blocks(1).len(), 16 * 16);
+        assert_eq!(FakeImage::squared(16).squared_blocks(16).len(), 1);
+        assert_eq!(FakeImage::squared(16).squared_blocks(8).len(), 2 * 2);
+        assert_eq!(FakeImage::squared(16).squared_blocks(4).len(), 4 * 4);
+        assert_eq!(FakeImage::squared(16).squared_blocks(2).len(), 8 * 8);
+        assert_eq!(FakeImage::squared(16).squared_blocks(1).len(), 16 * 16);
     }
 
     #[test]
     fn block_widths() {
-        let image = FakeImage::new(4, 4);
+        let image = FakeImage::squared(4);
         let blocks = image.squared_blocks(2);
         assert_eq!(blocks.len(), 4);
         assert_eq!(blocks[0].get_width(), 2);
@@ -127,7 +148,7 @@ mod tests {
 
     #[test]
     fn block_heights() {
-        let image = FakeImage::new(4, 4);
+        let image = FakeImage::squared(4);
         let blocks = image.squared_blocks(2);
         assert_eq!(blocks.len(), 4);
         assert_eq!(blocks[0].get_height(), 2);
@@ -138,7 +159,7 @@ mod tests {
 
     #[test]
     fn relative_pixel_values() {
-        let image = FakeImage::new(4, 4);
+        let image = FakeImage::squared(4);
         let blocks = image.squared_blocks(2);
         assert_eq!(blocks.len(), 4);
 
@@ -166,7 +187,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn relative_pixel_values_overflow_x() {
-        let image = FakeImage::new(4, 4);
+        let image = FakeImage::squared(4);
         let blocks = image.squared_blocks(2);
         assert_eq!(blocks.len(), 4);
         blocks[0].pixel(2, 0);

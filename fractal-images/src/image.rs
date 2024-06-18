@@ -5,6 +5,8 @@ pub mod block;
 pub mod downscale;
 pub mod owned;
 pub mod rotate;
+pub mod square;
+pub mod fake;
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
@@ -32,6 +34,9 @@ impl Size {
     pub fn get_width(&self) -> u32 { self.width }
 
     pub fn get_height(&self) -> u32 { self.height }
+
+    /// Returns `true` iff `self.width == self.height`
+    pub fn is_squared(&self) -> bool { self.width == self.height }
 }
 
 impl Div<u32> for Size {

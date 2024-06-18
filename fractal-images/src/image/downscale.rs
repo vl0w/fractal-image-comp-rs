@@ -72,11 +72,11 @@ impl<I: Image> IterablePixels for Downscaled2x2<I> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::testutils::FakeImage;
+    use crate::image::fake::FakeImage;
 
     #[test]
     fn downscaled_size() {
-        let image = FakeImage::new(16, 16).downscale_2x2();
+        let image = FakeImage::squared(16).downscale_2x2();
         assert_eq!(image.get_width(), 8);
         assert_eq!(image.get_height(), 8);
     }
@@ -89,7 +89,7 @@ mod tests {
         // 8  9  10 11
         // 12 13 14 15
 
-        let image = FakeImage::new(4, 4).downscale_2x2();
+        let image = FakeImage::squared(4).downscale_2x2();
         assert_eq!(image.pixel(0, 0), (1 + 4 + 5) / 4);
         assert_eq!(image.pixel(1, 0), (2 + 3 + 6 + 7) / 4);
         assert_eq!(image.pixel(0, 1), (8 + 9 + 12 + 13) / 4);
@@ -99,14 +99,14 @@ mod tests {
     #[test]
     #[should_panic]
     fn overflow_x() {
-        let image = FakeImage::new(4, 4).downscale_2x2();
+        let image = FakeImage::squared(4).downscale_2x2();
         image.pixel(2, 0);
     }
 
     #[test]
     #[should_panic]
     fn overflow_y() {
-        let image = FakeImage::new(4, 4).downscale_2x2();
+        let image = FakeImage::squared(4).downscale_2x2();
         image.pixel(0, 2);
     }
 }
