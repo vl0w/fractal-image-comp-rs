@@ -97,12 +97,10 @@ impl Add<Coords> for Coords {
 pub trait Image: Send + Sync {
     fn get_size(&self) -> Size;
 
-    fn get_height(&self) -> u32 {
-        return self.get_size().height;
-    }
+    fn get_height(&self) -> u32 { self.get_size().height }
 
     fn get_width(&self) -> u32 {
-        return self.get_size().width;
+        self.get_size().width
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel;
