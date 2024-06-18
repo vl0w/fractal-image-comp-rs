@@ -111,6 +111,7 @@ mod conversion {
 #[cfg(test)]
 mod tests {
     use crate::image::fake::FakeImage;
+    use crate::size;
 
     use super::*;
 
@@ -123,7 +124,7 @@ mod tests {
     #[test]
     #[should_panic]
     fn no_square_image() {
-        let _ = FakeImage::new(Size::new(16, 32)).squared_blocks(4);
+        let _ = FakeImage::new(size!(w=16, h=32)).squared_blocks(4);
     }
 
     #[test]

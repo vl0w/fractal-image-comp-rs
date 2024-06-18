@@ -116,7 +116,7 @@ mod tests {
 
         let image = FakeImage::squared(2);
         let image = image.rot_0();
-        assert_eq!(image.get_size(), Size::new(2, 2));
+        assert_eq!(image.get_size(), Size::squared(2));
         assert_eq!(image.pixel(0, 0), 0);
         assert_eq!(image.pixel(1, 0), 1);
         assert_eq!(image.pixel(0, 1), 2);
@@ -133,7 +133,7 @@ mod tests {
 
         let image = FakeImage::squared(2);
         let image = image.rot_90();
-        assert_eq!(image.get_size(), Size::new(2, 2));
+        assert_eq!(image.get_size(), Size::squared(2));
         assert_eq!(image.pixel(0, 0), 2);
         assert_eq!(image.pixel(1, 0), 0);
         assert_eq!(image.pixel(0, 1), 3);
@@ -150,7 +150,7 @@ mod tests {
 
         let image = FakeImage::squared(2);
         let image = image.rot_180();
-        assert_eq!(image.get_size(), Size::new(2, 2));
+        assert_eq!(image.get_size(), Size::squared(2));
         assert_eq!(image.pixel(0, 0), 3);
         assert_eq!(image.pixel(1, 0), 2);
         assert_eq!(image.pixel(0, 1), 1);
@@ -167,7 +167,7 @@ mod tests {
 
         let image = FakeImage::squared(2);
         let image = image.rot_270();
-        assert_eq!(image.get_size(), Size::new(2, 2));
+        assert_eq!(image.get_size(), Size::squared(2));
         assert_eq!(image.pixel(0, 0), 1);
         assert_eq!(image.pixel(1, 0), 3);
         assert_eq!(image.pixel(0, 1), 0);

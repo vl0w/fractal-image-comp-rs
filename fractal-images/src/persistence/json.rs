@@ -3,7 +3,7 @@ use std::io::Read;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::{coords, model};
+use crate::{coords, model, size};
 use crate::image::{Coords, Size};
 
 #[derive(Error, Debug)]
@@ -46,7 +46,7 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
         .collect();
 
     Ok(model::Compressed {
-        size: Size::new(contents.width, contents.height),
+        size: size!(w=contents.width, h=contents.height),
         transformations,
     })
 }

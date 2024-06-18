@@ -63,13 +63,13 @@ mod tests {
     #[test]
     fn test_power_of_two_fail() {
         assert!(PowerOfTwo::new(FakeImage::new(
-            Size::new(3, 4)
+            size!(w=3,h=4)
         )).is_err());
         assert!(PowerOfTwo::new(FakeImage::new(
-            Size::new(4, 3)
+            size!(w=4,h=3)
         )).is_err());
         assert!(PowerOfTwo::new(FakeImage::new(
-            Size::new(3, 3)
+            size!(w=3,h=3)
         )).is_err());
     }
 }

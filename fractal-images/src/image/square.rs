@@ -53,20 +53,21 @@ impl<I> Deref for Square<I> {
 mod tests {
     use crate::image::fake::FakeImage;
     use crate::image::Size;
+    use crate::size;
     use super::*;
 
     #[test]
     fn squared_image_test_success() {
-        let image = FakeImage::new(Size::new(100, 100));
+        let image = FakeImage::new(size!(w=100,h=100));
         let squared = Square::new(image);
         assert!(squared.is_ok());
     }
 
     #[test]
     fn squared_image_test_failure() {
-        let image = FakeImage::new(Size::new(100, 101));
+        let image = FakeImage::new(size!(w=100,h=101));
         let squared = Square::new(image);
         assert!(squared.is_err());
-        assert_eq!(squared.unwrap_err(), NotSquareError(FakeImage::new(Size::new(100, 101))));
+        assert_eq!(squared.unwrap_err(), NotSquareError(FakeImage::new(size!(w=100,h=101))));
     }
 }
