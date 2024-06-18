@@ -46,9 +46,7 @@ where
 impl<I> Deref for Square<I> {
     type Target = I;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
+    fn deref(&self) -> &Self::Target { &self.0 }
 }
 
 #[cfg(test)]

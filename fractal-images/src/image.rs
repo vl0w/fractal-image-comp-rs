@@ -7,6 +7,8 @@ pub mod owned;
 pub mod rotate;
 pub mod square;
 pub mod fake;
+pub mod power_of_two;
+
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
@@ -70,6 +72,23 @@ impl Mul<Size> for u32 {
             height: rhs.width * self,
         }
     }
+}
+
+/// A convenience macro to create [Size]s.
+#[macro_export]
+macro_rules! size {
+    (w = $width:expr, h = $height:expr) => {
+        Size::new($width, $height)
+    };
+    (width = $width:expr, height = $height:expr) => {
+        Size::new($width, $height)
+    };
+    (h = $height:expr, w = $width:expr) => {
+        Size::new($width, $height)
+    };
+    (height = $height:expr, width = $width:expr) => {
+        Size::new($width, $height)
+    };
 }
 
 /// Represents the coordinates of a pixel
