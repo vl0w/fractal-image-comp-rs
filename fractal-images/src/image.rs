@@ -25,9 +25,13 @@ impl Size {
         Self::new(size, size)
     }
 
-    fn area(&self) -> u32 {
+    pub fn area(&self) -> u32 {
         self.width * self.height
     }
+
+    pub fn get_width(&self) -> u32 { self.width }
+
+    pub fn get_height(&self) -> u32 { self.height }
 }
 
 impl Div<u32> for Size {
@@ -105,11 +109,11 @@ pub trait Image: Send + Sync {
 }
 
 pub trait IterablePixels {
-    fn pixels(&self) -> impl Iterator<Item = Pixel> {
+    fn pixels(&self) -> impl Iterator<Item=Pixel> {
         self.pixels_enumerated().map(|(pixel, _)| pixel)
     }
 
-    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)>;
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)>;
 }
 
 pub trait MutableImage {

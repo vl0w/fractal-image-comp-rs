@@ -1,11 +1,13 @@
+use std::sync::Arc;
+
+use tracing::instrument;
+
+use crate::image::{Image, IterablePixels, MutableImage};
 use crate::image::block::SquaredBlock;
 use crate::image::downscale::IntoDownscaled;
 use crate::image::owned::OwnedImage;
-use crate::image::{Image, IterablePixels, MutableImage, Size};
-use crate::model::{Compressed, Transformation};
-use std::sync::Arc;
-use tracing::instrument;
 use crate::image::rotate::IntoRotated;
+use crate::model::{Compressed, Transformation};
 
 #[derive(Debug)]
 pub struct Options {
@@ -20,7 +22,7 @@ pub struct Decompressed {
 
 #[instrument(level = "debug", skip(compressed))]
 pub fn decompress(compressed: Compressed, options: Options) -> Decompressed {
-    let mut image = OwnedImage::random(Size::new(compressed.width, compressed.height));
+    let mut image = OwnedImage::random(compressed.size);
     let mut image_per_iteration: Option<Vec<OwnedImage>> = match options.keep_each_iteration {
         false => None,
         true => Some(vec![]),

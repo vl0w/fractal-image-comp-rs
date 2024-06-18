@@ -3,8 +3,8 @@ use std::io::Read;
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::image::Coords;
 use crate::{coords, model};
+use crate::image::{Coords, Size};
 
 #[derive(Error, Debug)]
 pub enum SerializationError {
@@ -46,8 +46,7 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
         .collect();
 
     Ok(model::Compressed {
-        width: contents.width,
-        height: contents.height,
+        size: Size::new(contents.width, contents.height),
         transformations,
     })
 }
@@ -62,8 +61,8 @@ struct Contents {
 impl From<model::Compressed> for Contents {
     fn from(compressed: model::Compressed) -> Self {
         Self {
-            width: compressed.width,
-            height: compressed.height,
+            width: compressed.size.get_width(),
+            height: compressed.size.get_height(),
             mappings: compressed
                 .transformations
                 .into_iter()

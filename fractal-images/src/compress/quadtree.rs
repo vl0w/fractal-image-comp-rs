@@ -31,13 +31,12 @@ where
 
     #[instrument(level = "debug", skip(self))]
     pub fn compress(self) -> Compressed {
-        let image_height = self.image.get_height();
-        let image_width = self.image.get_width();
+        let size = self.image.get_size();
         assert_eq!(
-            image_height, image_width,
+            size.get_height(), size.get_width(),
             "Only square sized images supported"
         );
-        info!("Compressing {}x{} image", image_height, image_width);
+        info!("Compressing image size {size}", size=size);
 
         let domain_block_size: u32 = self.image.get_height();
         let range_block_size: u32 = (self.image.get_height() as f64 / 2.0) as u32;
@@ -70,8 +69,7 @@ where
             .collect::<Vec<Transformation>>();
 
         Compressed {
-            width: image_width,
-            height: image_height,
+            size,
             transformations,
         }
     }
