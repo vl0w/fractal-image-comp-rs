@@ -47,6 +47,20 @@ impl Size {
 
     /// Returns `true` iff `self.width == self.height`
     pub fn is_squared(&self) -> bool { self.width == self.height }
+
+    /// Swaps width and height of a size, i.e.
+    /// # Example
+    /// ```rust
+    /// use fractal_image::image::Size;
+    ///
+    /// assert_eq!(
+    ///     Size::new(1,2).transpose(),
+    ///     Size::new(2,1)
+    /// );
+    /// ```
+    pub fn transpose(&self) -> Self {
+        Size::new(self.get_height(), self.get_width())
+    }
 }
 
 impl Div<u32> for Size {
@@ -220,5 +234,13 @@ mod tests {
             Coords { x: 3, y: 4 } + Coords { x: 5, y: 6 },
             Coords { x: 3 + 5, y: 4 + 6 }
         );
+    }
+
+    #[test]
+    fn transpose_size() {
+        assert_eq!(
+            size!(w=1, h=2).transpose(),
+            size!(w=2, h=1)
+        )
     }
 }

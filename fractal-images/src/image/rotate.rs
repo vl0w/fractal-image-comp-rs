@@ -2,6 +2,7 @@ use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 use crate::model::Rotation;
 use std::sync::Arc;
+use crate::size;
 
 pub trait IntoRotated<I>
 where
@@ -79,7 +80,10 @@ where
     I: Image,
 {
     fn get_size(&self) -> Size {
-        self.image.get_size()
+        match self.rotation {
+            Rotation::By0 | Rotation::By180 => self.image.get_size(),
+            Rotation::By90 | Rotation::By270 => self.image.get_size().transpose()
+        }
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel {
@@ -98,7 +102,7 @@ impl<I> IterablePixels for Rotated<I>
 where
     I: Image,
 {
-    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }
@@ -108,6 +112,7 @@ mod tests {
     use crate::image::rotate::IntoRotated;
     use crate::image::{Image, Size};
     use crate::image::fake::FakeImage;
+    use crate::size;
 
     #[test]
     fn rotate_squared_by_0() {
@@ -172,5 +177,87 @@ mod tests {
         assert_eq!(image.pixel(1, 0), 3);
         assert_eq!(image.pixel(0, 1), 0);
         assert_eq!(image.pixel(1, 1), 2);
+    }
+
+    #[test]
+    fn rotate_3x2_by_0() {
+        // Original Image layout:
+        // 0 1 2
+        // 3 4 5
+
+        let image = FakeImage::new(size!(w=3,h=2));
+        let image = image.rot_0();
+        assert_eq!(image.get_size(), size!(w=3,h=2));
+        assert_eq!(image.pixel(0, 0), 0);
+        assert_eq!(image.pixel(1, 0), 1);
+        assert_eq!(image.pixel(2, 0), 2);
+        assert_eq!(image.pixel(0, 1), 3);
+        assert_eq!(image.pixel(1, 1), 4);
+        assert_eq!(image.pixel(2, 1), 5);
+    }
+
+    #[test]
+    fn rotate_3x2_by_90() {
+        // Original Image layout:
+        // 0 1 2
+        // 3 4 5
+        //
+        // After rotation by 90:
+        // 3 0
+        // 4 1
+        // 5 2
+
+        let image = FakeImage::new(size!(w=3,h=2));
+        let image = image.rot_90();
+        assert_eq!(image.get_size(), size!(w=2,h=3));
+        assert_eq!(image.pixel(0, 0), 3);
+        assert_eq!(image.pixel(1, 0), 0);
+        assert_eq!(image.pixel(0, 1), 4);
+        assert_eq!(image.pixel(1, 1), 1);
+        assert_eq!(image.pixel(0, 2), 5);
+        assert_eq!(image.pixel(1, 2), 2);
+    }
+
+    #[test]
+    fn rotate_3x2_by_180() {
+        // Original Image layout:
+        // 0 1 2
+        // 3 4 5
+        //
+        // After rotation by 180:
+        // 5 4 3
+        // 2 1 0
+
+        let image = FakeImage::new(size!(w=3,h=2));
+        let image = image.rot_180();
+        assert_eq!(image.get_size(), size!(w=3,h=2));
+        assert_eq!(image.pixel(0, 0), 5);
+        assert_eq!(image.pixel(1, 0), 4);
+        assert_eq!(image.pixel(2, 0), 3);
+        assert_eq!(image.pixel(0, 1), 2);
+        assert_eq!(image.pixel(1, 1), 1);
+        assert_eq!(image.pixel(2, 1), 0);
+    }
+
+    #[test]
+    fn rotate_3x2_by_270() {
+        // Original Image layout:
+        // 0 1 2
+        // 3 4 5
+        //
+        // After rotation by 270:
+        // 2 5
+        // 1 4
+        // 0 3
+
+        let image = FakeImage::new(size!(w=3,h=2));
+        let image = image.rot_270();
+        assert_eq!(image.get_size(), size!(w=2,h=3));
+        assert_eq!(image.pixel(0, 0), 2);
+        assert_eq!(image.pixel(1, 0), 5);
+        assert_eq!(image.pixel(0, 1), 1);
+        assert_eq!(image.pixel(1, 1), 4);
+        assert_eq!(image.pixel(0, 2), 0);
+        assert_eq!(image.pixel(1, 2), 3);
     }
 }
