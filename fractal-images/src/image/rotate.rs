@@ -1,8 +1,8 @@
-use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
-use crate::model::Rotation;
 use std::sync::Arc;
-use crate::size;
+
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
+use crate::image::iter::PixelIterator;
+use crate::model::Rotation;
 
 pub trait IntoRotated<I>
 where
@@ -109,9 +109,9 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::image::rotate::IntoRotated;
     use crate::image::{Image, Size};
     use crate::image::fake::FakeImage;
+    use crate::image::rotate::IntoRotated;
     use crate::size;
 
     #[test]

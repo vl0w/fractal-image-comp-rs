@@ -54,7 +54,7 @@ enum Commands {
     },
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(EnvFilter::from_default_env())
         .with_span_events(FmtSpan::FULL)
@@ -100,7 +100,7 @@ fn main() {
                 compressor
             };
 
-            let compressed = compressor.compress();
+            let compressed = compressor.compress()?;
 
             let size_of_file = compressed
                 .persist_as_json(&output_path)
@@ -110,6 +110,8 @@ fn main() {
                 "Size of compression: {}",
                 indicatif::HumanBytes(size_of_file)
             );
+
+            Ok(())
         }
         Commands::Decompress {
             input_path,
@@ -154,6 +156,8 @@ fn main() {
             }
 
             decompressed.image.save_image_as_png(&output_path);
+            
+            Ok(())
         }
     }
 }
