@@ -103,7 +103,6 @@ mod conversion {
     }
 
     fn create_blocks(image_size: Size, size: u32) -> Result<impl Iterator<Item=Block>, SquareSizeDoesNotDivideImageSize> {
-        assert!(image_size.is_squared());
         if image_size.get_width() % size != 0 || image_size.get_height() % size != 0 {
             return Err(SquareSizeDoesNotDivideImageSize(image_size, size));
         }
