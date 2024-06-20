@@ -124,6 +124,7 @@ pub struct Coords {
 /// A macro to create [Coords] of the form `(x,y)`.
 #[macro_export]
 macro_rules! coords {
+    // TODO: Better params!
     ($x: expr, $y: expr) => {
         Coords { x: $x, y: $y }
     };

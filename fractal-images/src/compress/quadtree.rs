@@ -1,5 +1,5 @@
 use crate::compress::Mapping;
-use crate::image::{IntoSquaredBlocks, SquaredBlock, SquareSizeDoesNotDivideImageSize};
+use crate::image::{IntoSquaredBlocks, Square, SquaredBlock, SquareSizeDoesNotDivideImageSize};
 use crate::image::IntoDownscaled;
 use crate::image::Image;
 use crate::image::IntoRotated;
@@ -23,11 +23,11 @@ pub enum CompressionError {
     InvalidSize(#[from] SquareSizeDoesNotDivideImageSize)
 }
 
-impl<I> Compressor<I>
+impl<I> Compressor<Square<I>>
 where
     I: Image + Send,
 {
-    pub fn new(image: I) -> Self {
+    pub fn new(image: Square<I>) -> Self {
         Self {
             error_threshold: ErrorThreshold::default(),
             progress_fn: None,
@@ -54,7 +54,7 @@ where
             .squared_blocks(range_block_size)?
             .into_iter()
             .map(Arc::new)
-            .collect::<Vec<Arc<_>>>();
+            .collect::<Vec<_>>();
 
         debug!(
             "Domain blocks: {} with size {}x{}",
@@ -86,11 +86,11 @@ where
     fn find_transformations_recursive(&self, rb: Arc<SquaredBlock<I>>) -> Result<Vec<Transformation>, CompressionError> {
         // TODO: We require that I is a power of 2!
         debug!("Finding transformation for range block {}", rb);
-        
+
         // Partition image into suitable domain blocks
         let domain_blocks = self.image.squared_blocks(2 * rb.size)?;
-        
-        match Transformation::find(domain_blocks, &rb, self.error_threshold) {
+
+        match Transformation::find(domain_blocks, rb.as_ref(), self.error_threshold) {
             Some(transformation) => {
                 debug!("For range block {}, found best matching domain block", rb);
 
@@ -109,7 +109,6 @@ where
                 } else {
                     let res = rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32)?
                         .into_par_iter()
-                        .map(|nrb| nrb.flatten())
                         .map(Arc::new)
                         .map(|nrb| self.find_transformations_recursive(nrb))
                         .collect::<Result<Vec<_>, CompressionError>>()?

@@ -1,5 +1,5 @@
 use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size, Square};
 use image::imageops::FilterType;
 use image::{DynamicImage, GrayImage, ImageFormat};
 use std::cmp::min;
@@ -9,12 +9,12 @@ use tracing::debug;
 #[derive(Debug)]
 pub struct SquaredGrayscaleImage {
     pixels: Vec<u8>,
-    size: Size
+    size: Size,
 }
 
 impl SquaredGrayscaleImage {
-    pub fn read_from(path: &Path) -> Self {
-        let image = image::open(path).expect(format!("Could not load image: {:?}", path).as_str());
+    pub fn read_from(path: &Path) -> Square<Self> {
+        let image = image::open(path).unwrap_or_else(|_| panic!("Could not load image: {:?}", path));
         let size = min(image.width(), image.height());
 
         // Ensure size is a multiple of 2
@@ -34,10 +34,10 @@ impl SquaredGrayscaleImage {
             })
             .collect::<Vec<_>>();
 
-        Self {
+        Square::new(Self {
             pixels: grayscale,
             size: Size::squared(size),
-        }
+        }).expect("Unable to create a square image")
     }
 }
 
@@ -53,7 +53,7 @@ impl Image for SquaredGrayscaleImage {
 }
 
 impl IterablePixels for SquaredGrayscaleImage {
-    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }
@@ -91,6 +91,6 @@ where
         let image = self.as_dynamic_image();
         image
             .save_with_format(path, format)
-            .expect(format!("Could not save image to {:?}", path).as_str());
+            .unwrap_or_else(|_| panic!("Could not save image to {:?}", path));
     }
 }
