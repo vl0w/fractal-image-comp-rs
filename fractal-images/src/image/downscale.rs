@@ -1,35 +1,7 @@
 use crate::image::iter::PixelIterator;
 use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 use std::sync::Arc;
-
-pub trait IntoDownscaled<I>
-where
-    I: Image,
-{
-    fn downscale_2x2(self) -> Downscaled2x2<I>;
-}
-
-impl<I> IntoDownscaled<I> for I
-where
-    I: Image,
-{
-    fn downscale_2x2(self) -> Downscaled2x2<I> {
-        Downscaled2x2 {
-            image: Arc::new(self),
-        }
-    }
-}
-
-impl<I> IntoDownscaled<I> for Arc<I>
-where
-    I: Image,
-{
-    fn downscale_2x2(self) -> Downscaled2x2<I> {
-        Downscaled2x2 {
-            image: self.clone(),
-        }
-    }
-}
+pub use conversion::*;
 
 pub struct Downscaled2x2<I> {
     image: Arc<I>,
@@ -63,8 +35,46 @@ impl<I: Image> Image for Downscaled2x2<I> {
     }
 }
 
+mod conversion {
+    use std::sync::Arc;
+    use crate::image::{Downscaled2x2, Image, Square, SquaredBlock};
+
+    pub trait IntoDownscaled<I>
+    where
+        I: Image,
+    {
+        type Target;
+        
+        fn downscale_2x2(self) -> Downscaled2x2<Self::Target>;
+    }
+
+    impl<I> IntoDownscaled<I> for &Square<I>
+    where
+        I: Image,
+    {
+        type Target = I;
+        fn downscale_2x2(self) -> Downscaled2x2<Self::Target> {
+            Downscaled2x2 {
+                image: self.as_inner(),
+            }
+        }
+    }
+
+    impl<I> IntoDownscaled<I> for &SquaredBlock<I>
+    where
+        I: Image,
+    {
+        type Target = SquaredBlock<I>;
+        fn downscale_2x2(self) -> Downscaled2x2<Self::Target> {
+            Downscaled2x2 {
+                image: Arc::new(self.clone()),
+            }
+        }
+    }
+}
+
 impl<I: Image> IterablePixels for Downscaled2x2<I> {
-    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
         PixelIterator::new(self)
     }
 }
@@ -95,6 +105,7 @@ mod tests {
         assert_eq!(image.pixel(0, 1), (8 + 9 + 12 + 13) / 4);
         assert_eq!(image.pixel(1, 1), (10 + 11 + 14 + 15) / 4);
     }
+    
 
     #[test]
     #[should_panic]
