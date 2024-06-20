@@ -1,5 +1,5 @@
 use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size, Square};
+use crate::image::{Coords, Image, IterablePixels, Pixel, PowerOfTwo, Size, Square};
 use image::imageops::FilterType;
 use image::{DynamicImage, GrayImage, ImageFormat};
 use std::cmp::min;
@@ -13,7 +13,7 @@ pub struct SquaredGrayscaleImage {
 }
 
 impl SquaredGrayscaleImage {
-    pub fn read_from(path: &Path) -> Square<Self> {
+    pub fn read_from(path: &Path) -> PowerOfTwo<Square<Self>> {
         let image = image::open(path).unwrap_or_else(|_| panic!("Could not load image: {:?}", path));
         let size = min(image.width(), image.height());
 
@@ -34,10 +34,12 @@ impl SquaredGrayscaleImage {
             })
             .collect::<Vec<_>>();
 
-        Square::new(Self {
+        let image = Square::new(Self {
             pixels: grayscale,
             size: Size::squared(size),
-        }).expect("Unable to create a square image")
+        }).expect("Unable to create a square image");
+        
+        PowerOfTwo::new(image).expect("Unable to downscale image to a power of two")
     }
 }
 

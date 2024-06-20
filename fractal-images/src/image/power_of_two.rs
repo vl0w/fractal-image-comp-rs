@@ -1,6 +1,7 @@
-use std::ops::Deref;
+use std::sync::Arc;
+use derive_more::Display;
 use thiserror::Error;
-use crate::image::Image;
+use crate::image::{Image, Pixel, Size};
 
 /// Represents an image with dimensions that are powers of two.
 ///
@@ -33,33 +34,53 @@ use crate::image::Image;
 /// ).is_err());
 /// ```
 ///
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct PowerOfTwo<I> (I);
+#[derive(Clone, Debug, Eq, PartialEq, Display)]
+pub struct PowerOfTwo<I> (Arc<I>);
 
 #[derive(Error, Debug, Copy, Clone, PartialEq, Eq)]
 #[error(
-    "The provided image's width or height is not a power of two, height = {}, {} = width", .0.get_height(), .0.get_width()
+    "The provided image's width or height is not a power of two, height = {}, width = {}", .0.get_height(), .0.get_width()
 )]
-pub struct NoPowerOfTwo<I: Image>(I);
+pub struct NoPowerOfTwo(Size);
 
 impl<I> PowerOfTwo<I>
 where
     I: Image,
 {
-    pub fn new(image: I) -> Result<Self, NoPowerOfTwo<I>> {
+    pub fn new(image: I) -> Result<Self, NoPowerOfTwo> {
+        Self::new_arc(Arc::new(image))
+    }
+
+    pub fn new_arc(image: Arc<I>) -> Result<Self, NoPowerOfTwo> {
         if !is_power_of_two(image.get_width()) || !is_power_of_two(image.get_height()) {
-            Err(NoPowerOfTwo(image))
+            Err(NoPowerOfTwo(image.get_size()))
         } else {
             Ok(Self(image))
         }
     }
+
+    pub fn as_inner(&self) -> Arc<I> {
+        self.0.clone()
+    }
+
+    pub fn into_inner(self) -> Arc<I> {
+        self.0
+    }
 }
 
-impl<I> Deref for PowerOfTwo<I> {
-    type Target = I;
+impl<I> Image for PowerOfTwo<I>
+where
+    I: Image,
+{
+    fn get_size(&self) -> Size {
+        self.0.get_size()
+    }
 
-    fn deref(&self) -> &Self::Target { &self.0 }
+    fn pixel(&self, x: u32, y: u32) -> Pixel {
+        self.0.pixel(x, y)
+    }
 }
+
 
 fn is_power_of_two(val: u32) -> bool {
     val != 0 && (val & (val - 1)) == 0

@@ -1,5 +1,7 @@
 use std::sync::Arc;
+
 use thiserror::Error;
+
 use crate::image::{Image, Pixel, Size};
 
 /// Represents a square image, i.e. an image whose [size](Size) is a square.
@@ -40,7 +42,7 @@ where
 
     pub fn new_arc(image: Arc<I>) -> Result<Self, NotSquareError<I>> {
         if image.get_size().is_squared() {
-            Ok(Square(image))
+            Ok(Self(image))
         } else {
             Err(NotSquareError(image))
         }
@@ -78,6 +80,7 @@ mod tests {
     use crate::image::fake::FakeImage;
     use crate::image::Size;
     use crate::size;
+
     use super::*;
 
     #[test]

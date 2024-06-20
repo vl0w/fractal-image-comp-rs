@@ -1,5 +1,5 @@
 use crate::compress::Mapping;
-use crate::image::{IntoSquaredBlocks, Square, SquaredBlock, SquareSizeDoesNotDivideImageSize};
+use crate::image::{IntoSquaredBlocks, NoPowerOfTwo, PowerOfTwo, Square, SquaredBlock, SquareSizeDoesNotDivideImageSize};
 use crate::image::IntoDownscaled;
 use crate::image::Image;
 use crate::image::IntoRotated;
@@ -20,14 +20,17 @@ pub struct Compressor<I> {
 #[derive(Error, Debug, Eq, PartialEq)]
 pub enum CompressionError {
     #[error(transparent)]
-    InvalidSize(#[from] SquareSizeDoesNotDivideImageSize)
+    InvalidSize(#[from] SquareSizeDoesNotDivideImageSize),
+
+    #[error(transparent)]
+    NoPowerOfTwo(#[from] NoPowerOfTwo)
 }
 
-impl<I> Compressor<Square<I>>
+impl<I> Compressor<PowerOfTwo<Square<I>>>
 where
     I: Image + Send,
 {
-    pub fn new(image: Square<I>) -> Self {
+    pub fn new(image: PowerOfTwo<Square<I>>) -> Self {
         Self {
             error_threshold: ErrorThreshold::default(),
             progress_fn: None,
@@ -44,13 +47,14 @@ where
         let domain_block_size: u32 = self.image.get_height();
         let range_block_size: u32 = (self.image.get_height() as f64 / 2.0) as u32;
 
-        let domain_blocks = self.image.squared_blocks(domain_block_size)?;
+        let domain_blocks = self.image.as_inner().squared_blocks(domain_block_size)?;
         let range_blocks = self
             .image
+            .as_inner()
             .squared_blocks(range_block_size)?
             .into_iter()
-            .map(Arc::new)
-            .collect::<Vec<_>>();
+            .map(PowerOfTwo::new)
+            .collect::<Result<Vec<_>,_>>()?;
 
         debug!(
             "Domain blocks: {} with size {}x{}",
@@ -66,12 +70,10 @@ where
         );
 
         let transformations = range_blocks
-            .par_iter()
-            .map(|rb| self.find_transformations_recursive(rb.clone()))
-            .collect::<Result<Vec<_>, CompressionError>>()?
-            .into_iter()
+            .into_par_iter()
+            .flat_map(|rb| self.find_transformations_recursive(Arc::new(rb)))
             .flatten()
-            .collect();
+            .collect::<Vec<_>>();
 
         Ok(Compressed {
             size,
@@ -79,12 +81,13 @@ where
         })
     }
 
-    fn find_transformations_recursive(&self, rb: Arc<SquaredBlock<I>>) -> Result<Vec<Transformation>, CompressionError> {
+    fn find_transformations_recursive(&self, rb: Arc<PowerOfTwo<SquaredBlock<I>>>) -> Result<Vec<Transformation>, CompressionError> {
         // TODO: We require that I is a power of 2!
         debug!("Finding transformation for range block {}", rb);
+        let rb = rb.as_inner();
 
         // Partition image into suitable domain blocks
-        let domain_blocks = self.image.squared_blocks(2 * rb.size)?;
+        let domain_blocks = self.image.as_inner().squared_blocks(2 * rb.size)?;
 
         match Transformation::find(domain_blocks, rb.as_ref(), self.error_threshold) {
             Some(transformation) => {
@@ -103,14 +106,16 @@ where
                     warn!("Unable to map range block {}", rb);
                     Ok(vec![]) // TODO: Should this really be an Ok?
                 } else {
-                    let res = rb.squared_blocks((rb.get_height() as f64 / 2.0) as u32)?
+
+                    let res = rb.squared_blocks((rb.size as f64 / 2.0) as u32)?
                         .into_par_iter()
-                        .map(Arc::new)
-                        .map(|nrb| self.find_transformations_recursive(nrb))
-                        .collect::<Result<Vec<_>, CompressionError>>()?
+                        .map(PowerOfTwo::new)
+                        .collect::<Result<Vec<_>, _>>()?
                         .into_iter()
+                        .flat_map(|nrb| self.find_transformations_recursive(Arc::new(nrb)))
                         .flatten()
-                        .collect();
+                        .collect::<Vec<_>>();
+                    
                     Ok(res)
                 }
                 
