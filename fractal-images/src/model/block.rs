@@ -20,7 +20,7 @@ impl Block {
             for j in 0..self.block_size {
                 let index =
                     (self.origin.y * image_width + self.origin.x + image_height * i + j) as usize;
-                indices.push((index, coords!(self.origin.x + j, self.origin.y + i)))
+                indices.push((index, coords!(x=self.origin.x + j, y=self.origin.y + i)))
             }
         }
 
@@ -48,20 +48,20 @@ mod tests {
 
         let block = Block {
             block_size: 3,
-            origin: coords!(2, 3),
+            origin: coords!(x=2, y=3),
         };
 
         assert_eq!(
             vec![
-                (32, coords!(2, 3)),
-                (33, coords!(3, 3)),
-                (34, coords!(4, 3)),
-                (42, coords!(2, 4)),
-                (43, coords!(3, 4)),
-                (44, coords!(4, 4)),
-                (52, coords!(2, 5)),
-                (53, coords!(3, 5)),
-                (54, coords!(4, 5))
+                (32, coords!(x=2, y=3)),
+                (33, coords!(x=3, y=3)),
+                (34, coords!(x=4, y=3)),
+                (42, coords!(x=2, y=4)),
+                (43, coords!(x=3, y=4)),
+                (44, coords!(x=4, y=4)),
+                (52, coords!(x=2, y=5)),
+                (53, coords!(x=3, y=5)),
+                (54, coords!(x=4, y=5))
             ],
             block.indices(10,10).collect::<Vec<_>>()
         );

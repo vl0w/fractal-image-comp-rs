@@ -113,7 +113,7 @@ mod conversion {
 
         Ok(x_block.cartesian_product(y_block).map(move |(x, y)| Block {
             block_size: size,
-            origin: coords!(size * y, size * x),
+            origin: coords!(x=size * y, y=size * x),
         }))
     }
 }

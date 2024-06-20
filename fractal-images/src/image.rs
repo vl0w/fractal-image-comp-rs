@@ -124,8 +124,10 @@ pub struct Coords {
 /// A macro to create [Coords] of the form `(x,y)`.
 #[macro_export]
 macro_rules! coords {
-    // TODO: Better params!
-    ($x: expr, $y: expr) => {
+    (x=$x: expr, y=$y: expr) => {
+        Coords { x: $x, y: $y }
+    };
+    (y=$y: expr, x=$x: expr) => {
         Coords { x: $x, y: $y }
     };
 }
@@ -171,14 +173,14 @@ pub mod iter {
     #[derive(Copy, Clone)]
     enum Next {
         Done,
-        Xy(u32, u32),
+        Xy(Coords),
     }
 
     impl Next {
         fn next_index(&self, size: Size) -> Self {
             match self {
                 Next::Done => Next::Done,
-                Next::Xy(x, y) => {
+                Next::Xy(Coords { x, y }) => {
                     let mut nx = x + 1;
                     let mut ny = *y;
                     if nx >= size.width {
@@ -189,7 +191,7 @@ pub mod iter {
                     if ny >= size.height {
                         Next::Done
                     } else {
-                        Next::Xy(nx, ny)
+                        Next::Xy(coords!(x=nx, y=ny))
                     }
                 }
             }
@@ -206,7 +208,7 @@ pub mod iter {
         pub fn new(image: &'a T) -> Self {
             PixelIterator {
                 image,
-                next: Next::Xy(0, 0),
+                next: Next::Xy(coords!(x=0, y=0)),
             }
         }
     }
@@ -216,9 +218,9 @@ pub mod iter {
         fn next(&mut self) -> Option<Self::Item> {
             match self.next {
                 Next::Done => None,
-                Next::Xy(x, y) => {
+                Next::Xy(Coords { x, y }) => {
                     self.next = self.next.next_index(self.image.get_size());
-                    Some((self.image.pixel(x, y), coords!(x, y)))
+                    Some((self.image.pixel(x, y), coords!(x=x, y=y)))
                 }
             }
         }

@@ -29,19 +29,19 @@ pub fn deserialize(reader: impl Read) -> Result<model::Compressed, Deserializati
     let transformations = contents
         .mappings
         .into_iter()
-        .map(|x| model::Transformation {
+        .map(|m| model::Transformation {
             range: model::Block {
-                block_size: x.range.size,
-                origin: coords!(x.range.x, x.range.y),
+                block_size: m.range.size,
+                origin: coords!(x=m.range.x, y=m.range.y),
             },
             domain: model::Block {
-                block_size: x.domain.size,
-                origin: coords!(x.domain.x, x.domain.y),
+                block_size: m.domain.size,
+                origin: coords!(x=m.domain.x, y=m.domain.y),
             },
-            rotation: model::Rotation::try_from(x.rotation.0)
+            rotation: model::Rotation::try_from(m.rotation.0)
                 .unwrap_or(model::Rotation::By0),
-            brightness: x.brightness,
-            saturation: x.saturation,
+            brightness: m.brightness,
+            saturation: m.saturation,
         })
         .collect();
 
