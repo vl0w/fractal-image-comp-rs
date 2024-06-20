@@ -39,10 +39,6 @@ where
     #[instrument(level = "debug", skip(self))]
     pub fn compress(self) -> Result<Compressed, CompressionError> {
         let size = self.image.get_size();
-        assert_eq!(
-            size.get_height(), size.get_width(),
-            "Only square sized images supported"
-        );
         info!("Compressing image size {size}", size=size);
 
         let domain_block_size: u32 = self.image.get_height();
