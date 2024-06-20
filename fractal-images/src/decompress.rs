@@ -25,9 +25,8 @@ pub fn decompress(compressed: Compressed, options: Options) -> Decompressed {
     let mut image = OwnedImage::random(compressed.size);
     let mut image_per_iteration: Option<Vec<OwnedImage>> = match options.keep_each_iteration {
         false => None,
-        true => Some(vec![]),
+        true => Some(vec![image.clone()]),
     };
-
     for _ in 0..options.iterations {
         let previous_pass = Arc::new(image.clone());
         for transformation in compressed.transformations.iter() {
