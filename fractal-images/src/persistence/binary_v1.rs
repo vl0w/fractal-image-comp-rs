@@ -1,8 +1,6 @@
-use std::io::Read;
-
-use anyhow::bail;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use thiserror::Error;
+use std::io::Read;
 
 use crate::{coords, model};
 use crate::image::{Coords, Size};
@@ -40,13 +38,13 @@ fn generate_map(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32,
         if t.domain.block_size != 2 * t.range.block_size {
             return Err(SerializationError::InvalidBlockSize { range_size: t.range.block_size, domain_size: t.domain.block_size });
         }
-        
+
         let range_size = t.range.block_size;
 
         let rb_entry = rb_to_trans_map.entry(range_size).or_insert(RbEntry {
             entries: vec![],
         });
-        
+
         rb_entry.entries.push(RbEntryChild {
             rb_origin: t.range.origin,
             db_origin: t.domain.origin,
@@ -162,37 +160,6 @@ impl RbEntryChild {
         Ok(Self {
             rb_origin: coords!(x=rb_origin_x, y=rb_origin_y),
             db_origin: coords!(x=db_origin_x, y=db_origin_y),
-            rotation,
-            brightness,
-            saturation,
-        })
-    }
-}
-
-impl TryFrom<&[&str]> for RbEntryChild {
-    type Error = anyhow::Error;
-
-    fn try_from(value: &[&str]) -> Result<Self, Self::Error> {
-        if value.len() != 7 {
-            bail!("Invalid range block entry (size expected to be ???)")
-        }
-
-        let x = value[0].parse::<u32>().expect("nAn");
-        let y = value[1].parse::<u32>().expect("nAn");
-        let rb_coords = coords!(x=x, y=y);
-
-        let x = value[2].parse::<u32>().expect("nAn");
-        let y = value[3].parse::<u32>().expect("nAn");
-        let db_coords = coords!(x=x, y=y);
-
-        let rotation = value[4].parse::<u8>().expect("nAn");
-        let brightness = value[5].parse::<i16>().expect("nAn");
-        let saturation = value[6].parse::<f64>().expect("nAn");
-
-
-        Ok(Self {
-            rb_origin: rb_coords,
-            db_origin: db_coords,
             rotation,
             brightness,
             saturation,
