@@ -103,7 +103,7 @@ fn main() -> anyhow::Result<()> {
             let compressed = compressor.compress()?;
 
             let size_of_file = compressed
-                .persist_as_json(&output_path)
+                .persist_as_qfic(&output_path)
                 .expect("Could not save compression");
 
             info!(
@@ -120,7 +120,7 @@ fn main() -> anyhow::Result<()> {
             keep,
         } => {
             let compressed =
-                Compressed::read_from_json(&input_path).expect("Could not read compressed file");
+                Compressed::read_from_qfic_v1(&input_path).expect("Could not read compressed file");
             let decompressed = decompress::decompress(
                 compressed,
                 decompress::Options {

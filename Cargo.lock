@@ -396,7 +396,9 @@ name = "fractal-image"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "byteorder",
  "derive_more",
+ "fxhash",
  "image",
  "itertools 0.13.0",
  "log",
@@ -419,6 +421,15 @@ dependencies = [
  "indicatif",
  "tracing",
  "tracing-subscriber",
+]
+
+[[package]]
+name = "fxhash"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c31b6d751ae2c7f11320402d34e41349dd1016f8d5d45e48c4312bc8625af50c"
+dependencies = [
+ "byteorder",
 ]
 
 [[package]]
