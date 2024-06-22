@@ -2,17 +2,22 @@ use std::io::Read;
 
 use anyhow::bail;
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use itertools::Itertools;
 use thiserror::Error;
 
 use crate::{coords, model};
 use crate::image::{Coords, Size};
-use crate::model::Rotation;
+use crate::model::{Rotation, RotationInvalidError};
 
 #[derive(Error, Debug)]
 pub enum SerializationError {
     #[error("IO error: {0}")]
-    IO(#[from] std::io::Error)
+    IO(#[from] std::io::Error),
+
+    #[error("Persistence layer expects a quadtree compression.\
+    The size of the domain block needs to be twice as the size of a range block, but it was not
+    ({} != 2 * {})
+    ", .domain_size, .range_size)]
+    InvalidBlockSize { range_size: u32, domain_size: u32 },
 }
 
 pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, SerializationError> {
@@ -32,15 +37,16 @@ pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, Serializatio
 fn generate_map(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32, RbEntry>, SerializationError> {
     let mut rb_to_trans_map = fxhash::FxHashMap::default();
     for t in &compressed.transformations {
-        // TODO: Check that domain block size is 2*range_block_size
+        if t.domain.block_size != 2 * t.range.block_size {
+            return Err(SerializationError::InvalidBlockSize { range_size: t.range.block_size, domain_size: t.domain.block_size });
+        }
+        
         let range_size = t.range.block_size;
 
         let rb_entry = rb_to_trans_map.entry(range_size).or_insert(RbEntry {
-            amount: 0,
             entries: vec![],
         });
-
-        rb_entry.amount += 1;
+        
         rb_entry.entries.push(RbEntryChild {
             rb_origin: t.range.origin,
             db_origin: t.domain.origin,
@@ -56,7 +62,10 @@ fn generate_map(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32,
 #[derive(Error, Debug)]
 pub enum DeserializationError {
     #[error("IO error: {0}")]
-    IO(#[from] std::io::Error)
+    IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    InvalidRotation(#[from] RotationInvalidError),
 }
 
 pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, DeserializationError> {
@@ -67,8 +76,6 @@ pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, Deseriali
 
 
     while let Ok(range_size) = reader.read_u32::<LittleEndian>() {
-        // let transformations_count = reader.read_u32::<LittleEndian>()?;
-        // for _ in 0..transformations_count {
         let rb_entry = RbEntry::deserialize(&mut reader)?;
 
         for rb_child in rb_entry.entries {
@@ -82,8 +89,7 @@ pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, Deseriali
                         block_size: 2 * range_size,
                         origin: rb_child.db_origin,
                     },
-                    // TODO: no unwrap!
-                    rotation: Rotation::try_from(rb_child.rotation).unwrap(),
+                    rotation: Rotation::try_from(rb_child.rotation)?,
                     brightness: rb_child.brightness,
                     saturation: rb_child.saturation,
                 }
@@ -98,73 +104,7 @@ pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, Deseriali
     })
 }
 
-#[cfg(test)]
-mod test {
-    use std::io::Cursor;
-
-    use crate::model::{Block, Compressed, Rotation, Transformation};
-    use crate::size;
-
-    use super::*;
-
-    #[test]
-    fn no_transformations() {
-        let compressed = Compressed {
-            size: size!(w=123, h=456),
-            transformations: vec![],
-        };
-
-        let serialized = serialize(&compressed).unwrap();
-        let cursor = Cursor::new(serialized);
-        let deserialized = deserialize(cursor).unwrap();
-        assert_eq!(deserialized.size, size!(w=123, h=456));
-        assert!(deserialized.transformations.is_empty())
-    }
-
-    #[test]
-    fn one_transformation() {
-        let transformation = Transformation {
-            range: Block {
-                block_size: 16,
-                origin: coords!(x=1, y=2),
-            },
-            domain: Block {
-                block_size: 32,
-                origin: coords!(x=3, y=4),
-            },
-            rotation: Rotation::By0,
-            brightness: 5,
-            saturation: 6.7,
-        };
-        let compressed = Compressed {
-            size: size!(w=123, h=456),
-            transformations: vec![transformation],
-        };
-
-        let serialized = serialize(&compressed).unwrap();
-        let cursor = Cursor::new(serialized);
-        let deserialized = deserialize(cursor).unwrap();
-        assert_eq!(deserialized.size, size!(w=123, h=456));
-        assert_eq!(deserialized.transformations.len(), 1);
-        assert_eq!(deserialized.transformations[0], transformation);
-    }
-
-    #[test]
-    #[ignore]
-    fn multiple_transformations() {
-        todo!()
-    }
-
-    #[test]
-    #[ignore]
-    fn compress_invalid_domain_block_size() {
-        todo!()
-    }
-}
-
 struct RbEntry {
-    // TODO: Remove :)
-    amount: u32,
     entries: Vec<RbEntryChild>,
 }
 
@@ -185,44 +125,10 @@ impl RbEntry {
             entries.push(entry);
         }
         Ok(Self {
-            amount: entries_count,
             entries,
         })
     }
 }
-//
-// impl TryFrom<String> for RbEntry {
-//     type Error = anyhow::Error;
-//
-//     fn try_from(value: String) -> Result<Self, Self::Error> {
-//         let splitted: Vec<&str> = value.split(',').collect();
-//         if splitted.len() < 1 {
-//             bail!("???");
-//         }
-//
-//         let amount = splitted[0].parse::<u32>().expect("nAn");
-//
-//         if splitted.len() != 1 + 7 * amount as usize {
-//             bail!("nope")
-//         }
-//
-//         let splitted = splitted.into_iter().dropping(1).collect::<Vec<&str>>();
-//
-//         if splitted.len() != 7 * amount as usize {
-//             bail!("nope")
-//         }
-//
-//         let entries = splitted
-//             .chunks_exact(7)
-//             .map(RbEntryChild::try_from)
-//             .collect::<Result<Vec<RbEntryChild>, _>>()?;
-//
-//         Ok(Self {
-//             amount,
-//             entries
-//         })
-//     }
-// }
 
 struct RbEntryChild {
     rb_origin: Coords,
@@ -294,36 +200,96 @@ impl TryFrom<&[&str]> for RbEntryChild {
     }
 }
 
+#[cfg(test)]
+mod test {
+    use std::io::Cursor;
 
-impl TryFrom<String> for RbEntryChild {
-    type Error = anyhow::Error;
+    use crate::model::{Block, Compressed, Rotation, Transformation};
+    use crate::size;
+    use fluid::prelude::*;
 
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        let splitted: Vec<&str> = value.split(',').collect();
+    use super::*;
 
-        if splitted.len() != 7 {
-            bail!("Invalid range block entry (size expected to be ???)")
+    #[test]
+    fn no_transformations() {
+        let compressed = Compressed {
+            size: size!(w=123, h=456),
+            transformations: vec![],
+        };
+
+        let serialized = serialize(&compressed).unwrap();
+        let cursor = Cursor::new(serialized);
+        let deserialized = deserialize(cursor).unwrap();
+        assert_eq!(deserialized.size, size!(w=123, h=456));
+        assert!(deserialized.transformations.is_empty())
+    }
+
+    #[fact]
+    fn one_transformation() {
+        let transformation = create_transformation();
+        let compressed = Compressed {
+            size: size!(w=123, h=456),
+            transformations: vec![transformation],
+        };
+
+        let serialized = serialize(&compressed).unwrap();
+        let deserialized = deserialize(Cursor::new(serialized)).unwrap();
+        deserialized.size.should().be_equal_to(size!(w=123, h= 456));
+        deserialized.transformations.len().should().be_equal_to(1);
+        deserialized.transformations[0].should().be_equal_to(transformation);
+    }
+
+    #[fact]
+    fn multiple_transformations_should_be_compressable_and_decompressable() {
+        let mut t_16_1 = create_transformation();
+        t_16_1.range.block_size = 16;
+        t_16_1.domain.block_size = 32;
+        let mut t_16_2 = create_transformation();
+        t_16_2.range.block_size = 16;
+        t_16_2.domain.block_size = 32;
+        let mut t_32_1 = create_transformation();
+        t_32_1.range.block_size = 32;
+        t_32_1.domain.block_size = 64;
+        let compressed = Compressed {
+            size: size!(w=123, h=456),
+            transformations: vec![t_16_1, t_16_2, t_32_1],
+        };
+
+        let serialized = serialize(&compressed).unwrap();
+        let deserialized = deserialize(Cursor::new(serialized)).unwrap();
+        deserialized.size.should().be_equal_to(size!(w=123, h= 456));
+        deserialized.transformations.len().should().be_equal_to(3);
+        deserialized.transformations[0].should().be_equal_to(t_16_1);
+        deserialized.transformations[1].should().be_equal_to(t_16_2);
+        deserialized.transformations[2].should().be_equal_to(t_32_1);
+    }
+
+    #[fact]
+    fn invalid_domain_block_size_returns_error() {
+        let mut transformation = create_transformation();
+        transformation.domain.block_size *= 2;
+        let compressed = Compressed {
+            size: size!(w=123, h=456),
+            transformations: vec![transformation],
+        };
+
+        serialize(&compressed).should().be_an_error()
+            .because("the domain block size is not twice the range block size");
+    }
+
+    fn create_transformation() -> Transformation {
+        Transformation {
+            range: Block {
+                block_size: 16,
+                origin: coords!(x=rand::random(), y=rand::random()),
+            },
+            domain: Block {
+                block_size: 32,
+                origin: coords!(x=rand::random(), y=rand::random()),
+            },
+            rotation: Rotation::By0,
+            brightness: rand::random(),
+            saturation: rand::random(),
         }
-
-        let x = splitted[0].parse::<u32>().expect("nAn");
-        let y = splitted[1].parse::<u32>().expect("nAn");
-        let rb_coords = coords!(x=x, y=y);
-
-        let x = splitted[2].parse::<u32>().expect("nAn");
-        let y = splitted[3].parse::<u32>().expect("nAn");
-        let db_coords = coords!(x=x, y=y);
-
-        let rotation = splitted[4].parse::<u8>().expect("nAn");
-        let brightness = splitted[5].parse::<i16>().expect("nAn");
-        let saturation = splitted[6].parse::<f64>().expect("nAn");
-
-
-        Ok(Self {
-            rb_origin: rb_coords,
-            db_origin: db_coords,
-            rotation,
-            brightness,
-            saturation,
-        })
     }
 }
