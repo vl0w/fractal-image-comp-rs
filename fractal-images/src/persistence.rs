@@ -1,3 +1,4 @@
+#[cfg(feature = "persist-as-json")]
 mod json;
 mod qfic_v1;
 
@@ -11,33 +12,41 @@ use tracing::debug;
 
 #[derive(Debug)]
 enum Format {
+    #[cfg(feature = "persist-as-json")]
     Json,
+    #[cfg(feature = "persist-as-binary-v1")]
     QuadtreeFicV1,
 }
 
 #[derive(Error, Debug)]
 pub enum PersistenceError {
+    #[cfg(feature = "persist-as-json")]
     #[error("Error while deserializing JSON: {0}")]
     JSONDeserializationError(#[from] json::DeserializationError),
 
+    #[cfg(feature = "persist-as-json")]
     #[error("Error while serializing JSON: {0}")]
     JSONSerializationError(#[from] json::SerializationError),
 
     #[error("IO error: {0}")]
     IO(#[from] io::Error),
 
+    #[cfg(feature = "persist-as-binary-v1")]
     #[error("Error while serializing as QFIC (v1): {0}")]
     QFicV1SerializationError(#[from] qfic_v1::SerializationError),
 
+    #[cfg(feature = "persist-as-binary-v1")]
     #[error("Error while deserializing as QFIC (v1): {0}")]
     QFicV1DeserializationError(#[from] qfic_v1::DeserializationError),
 }
 
 impl Compressed {
+    #[cfg(feature = "persist-as-json")]
     pub fn persist_as_json(&self, path: &Path) -> Result<u64, PersistenceError> {
         self.persist_with(Format::Json, path)
     }
 
+    #[cfg(feature = "persist-as-binary-v1")]
     pub fn persist_as_qfic(&self, path: &Path) -> Result<u64, PersistenceError> {
         self.persist_with(Format::QuadtreeFicV1, path)
     }
@@ -45,7 +54,9 @@ impl Compressed {
     fn persist_with(&self, format: Format, path: &Path) -> Result<u64, PersistenceError> {
         debug!("Persisting as {:?}", format);
         let serialized: Vec<u8> = match format {
+            #[cfg(feature = "persist-as-json")]
             Format::Json => json::serialize(self)?,
+            #[cfg(feature = "persist-as-binary-v1")]
             Format::QuadtreeFicV1 => qfic_v1::serialize(self)?,
         };
 
@@ -57,6 +68,7 @@ impl Compressed {
         Ok(file.metadata().unwrap().len())
     }
 
+    #[cfg(feature = "persist-as-json")]
     pub fn read_from_json(path: &Path) -> Result<Self, PersistenceError> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
@@ -64,6 +76,7 @@ impl Compressed {
         Ok(compressed)
     }
 
+    #[cfg(feature = "persist-as-binary-v1")]
     pub fn read_from_qfic_v1(path: &Path) -> Result<Self, PersistenceError> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
