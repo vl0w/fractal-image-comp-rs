@@ -1,21 +1,24 @@
 //! Binary compression for quadtree compressed images.
 //!
 //! The binary format uses the following pattern:
-//! 
+//!
 //! `<image width><image height>(<range block size><amount of blocks><block>)*`
-//! 
+//!
 //! where
-//! 
+//!
 //! `<block> = <range block origin><domain block origin><rotation><brightness><saturation>`
 //!
+//! Furthermore, the binary is compressed with DEFLATE.
+//! 
 //! ## Important
-//! Relies on the fact that every domain block is twice the size of a range block. 
+//! Relies on the fact that every domain block is twice the size of a range block.
 //! Returns a [SerializationError] if this is violated.
 
-use std::io::Read;
+use std::io::{Cursor, Read};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use thiserror::Error;
+use tracing::error;
 
 use crate::{coords, model};
 use crate::image::{Coords, Size};
@@ -40,6 +43,9 @@ pub enum DeserializationError {
 
     #[error(transparent)]
     InvalidRotation(#[from] RotationInvalidError),
+
+    #[error("Error while inflating compressed image")]
+    InflateError,
 }
 
 pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, SerializationError> {
@@ -53,7 +59,12 @@ pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, Serializatio
         result.write_u32::<LittleEndian>(rb_size)?;
         entry.serialize(&mut result)?;
     }
-    Ok(result)
+
+    Ok(deflate(&result))
+}
+
+fn deflate(data: &[u8]) -> Vec<u8> {
+    miniz_oxide::deflate::compress_to_vec(data, 1)
 }
 
 fn generate_entries(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32, Entry>, SerializationError> {
@@ -82,7 +93,9 @@ fn generate_entries(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<
 }
 
 #[tracing::instrument(skip(reader))]
-pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, DeserializationError> {
+pub fn deserialize(reader: impl Read) -> Result<model::Compressed, DeserializationError> {
+    let mut reader = inflate(reader)?;
+
     let width = reader.read_u32::<LittleEndian>().unwrap();
     let height = reader.read_u32::<LittleEndian>().unwrap();
 
@@ -114,6 +127,16 @@ pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, Deseriali
         size: Size::new(width, height),
         transformations,
     })
+}
+
+fn inflate(mut read: impl Read) -> Result<impl Read, DeserializationError> {
+    let mut bytes = Vec::new();
+    read.read_to_end(&mut bytes)?;
+    let what = miniz_oxide::inflate::decompress_to_vec(&bytes).map_err(|err| {
+        error!("Error while inflating: {:?}", err);
+        DeserializationError::InflateError
+    })?;
+    Ok(Cursor::new(what))
 }
 
 struct Entry {
