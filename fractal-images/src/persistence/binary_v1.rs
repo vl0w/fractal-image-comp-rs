@@ -1,6 +1,21 @@
+//! Binary compression for quadtree compressed images.
+//!
+//! The binary format uses the following pattern:
+//! 
+//! `<image width><image height>(<range block size><amount of blocks><block>)*`
+//! 
+//! where
+//! 
+//! `<block> = <range block origin><domain block origin><rotation><brightness><saturation>`
+//!
+//! ## Important
+//! Relies on the fact that every domain block is twice the size of a range block. 
+//! Returns a [SerializationError] if this is violated.
+
+use std::io::Read;
+
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use thiserror::Error;
-use std::io::Read;
 
 use crate::{coords, model};
 use crate::image::{Coords, Size};
@@ -18,12 +33,21 @@ pub enum SerializationError {
     InvalidBlockSize { range_size: u32, domain_size: u32 },
 }
 
+#[derive(Error, Debug)]
+pub enum DeserializationError {
+    #[error("IO error: {0}")]
+    IO(#[from] std::io::Error),
+
+    #[error(transparent)]
+    InvalidRotation(#[from] RotationInvalidError),
+}
+
 pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, SerializationError> {
     let mut result: Vec<u8> = Vec::new();
     result.write_u32::<LittleEndian>(compressed.size.get_width())?;
     result.write_u32::<LittleEndian>(compressed.size.get_height())?;
 
-    let rb_to_trans_map = generate_map(compressed)?;
+    let rb_to_trans_map = generate_entries(compressed)?;
 
     for (rb_size, entry) in rb_to_trans_map {
         result.write_u32::<LittleEndian>(rb_size)?;
@@ -32,7 +56,7 @@ pub fn serialize(compressed: &model::Compressed) -> Result<Vec<u8>, Serializatio
     Ok(result)
 }
 
-fn generate_map(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32, RbEntry>, SerializationError> {
+fn generate_entries(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32, Entry>, SerializationError> {
     let mut rb_to_trans_map = fxhash::FxHashMap::default();
     for t in &compressed.transformations {
         if t.domain.block_size != 2 * t.range.block_size {
@@ -41,11 +65,11 @@ fn generate_map(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32,
 
         let range_size = t.range.block_size;
 
-        let rb_entry = rb_to_trans_map.entry(range_size).or_insert(RbEntry {
+        let rb_entry = rb_to_trans_map.entry(range_size).or_insert(Entry {
             entries: vec![],
         });
 
-        rb_entry.entries.push(RbEntryChild {
+        rb_entry.entries.push(EntryChild {
             rb_origin: t.range.origin,
             db_origin: t.domain.origin,
             rotation: t.rotation.into(),
@@ -57,24 +81,15 @@ fn generate_map(compressed: &model::Compressed) -> Result<fxhash::FxHashMap<u32,
     Ok(rb_to_trans_map)
 }
 
-#[derive(Error, Debug)]
-pub enum DeserializationError {
-    #[error("IO error: {0}")]
-    IO(#[from] std::io::Error),
-
-    #[error(transparent)]
-    InvalidRotation(#[from] RotationInvalidError),
-}
-
+#[tracing::instrument(skip(reader))]
 pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, DeserializationError> {
     let width = reader.read_u32::<LittleEndian>().unwrap();
     let height = reader.read_u32::<LittleEndian>().unwrap();
 
     let mut transformations = vec![];
 
-
     while let Ok(range_size) = reader.read_u32::<LittleEndian>() {
-        let rb_entry = RbEntry::deserialize(&mut reader)?;
+        let rb_entry = Entry::deserialize(&mut reader)?;
 
         for rb_child in rb_entry.entries {
             transformations.push(
@@ -92,7 +107,6 @@ pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, Deseriali
                     saturation: rb_child.saturation,
                 }
             );
-            // }
         }
     }
 
@@ -102,11 +116,11 @@ pub fn deserialize(mut reader: impl Read) -> Result<model::Compressed, Deseriali
     })
 }
 
-struct RbEntry {
-    entries: Vec<RbEntryChild>,
+struct Entry {
+    entries: Vec<EntryChild>,
 }
 
-impl RbEntry {
+impl Entry {
     fn serialize(&self, buf: &mut Vec<u8>) -> Result<(), SerializationError> {
         buf.write_u32::<LittleEndian>(self.entries.len() as u32)?;
         for entry in &self.entries {
@@ -119,7 +133,7 @@ impl RbEntry {
         let entries_count = reader.read_u32::<LittleEndian>()?;
         let mut entries = Vec::with_capacity(entries_count as usize);
         for _ in 0..entries_count {
-            let entry = RbEntryChild::deserialize(reader)?;
+            let entry = EntryChild::deserialize(reader)?;
             entries.push(entry);
         }
         Ok(Self {
@@ -128,7 +142,7 @@ impl RbEntry {
     }
 }
 
-struct RbEntryChild {
+struct EntryChild {
     rb_origin: Coords,
     db_origin: Coords,
     rotation: u8,
@@ -136,7 +150,7 @@ struct RbEntryChild {
     saturation: f64,
 }
 
-impl RbEntryChild {
+impl EntryChild {
     fn serialize(&self, buf: &mut Vec<u8>) -> Result<(), SerializationError> {
         buf.write_u32::<LittleEndian>(self.rb_origin.x)?;
         buf.write_u32::<LittleEndian>(self.rb_origin.y)?;
@@ -171,9 +185,10 @@ impl RbEntryChild {
 mod test {
     use std::io::Cursor;
 
+    use fluid::prelude::*;
+
     use crate::model::{Block, Compressed, Rotation, Transformation};
     use crate::size;
-    use fluid::prelude::*;
 
     use super::*;
 

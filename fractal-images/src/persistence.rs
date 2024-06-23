@@ -1,7 +1,7 @@
 #[cfg(feature = "persist-as-json")]
 mod json;
 #[cfg(feature = "persist-as-binary-v1")]
-mod binary_v1;
+pub mod binary_v1;
 
 use crate::model::Compressed;
 use std::fs::File;
@@ -34,11 +34,11 @@ pub enum PersistenceError {
 
     #[cfg(feature = "persist-as-binary-v1")]
     #[error("Error while serializing as QFIC (v1): {0}")]
-    QFicV1SerializationError(#[from] binary_v1::SerializationError),
+    BinaryV1SerializationError(#[from] binary_v1::SerializationError),
 
     #[cfg(feature = "persist-as-binary-v1")]
     #[error("Error while deserializing as QFIC (v1): {0}")]
-    QFicV1DeserializationError(#[from] binary_v1::DeserializationError),
+    BinaryV1DeserializationError(#[from] binary_v1::DeserializationError),
 }
 
 impl Compressed {
@@ -48,7 +48,7 @@ impl Compressed {
     }
 
     #[cfg(feature = "persist-as-binary-v1")]
-    pub fn persist_as_qfic(&self, path: &Path) -> Result<u64, PersistenceError> {
+    pub fn persist_as_binary_v1(&self, path: &Path) -> Result<u64, PersistenceError> {
         self.persist_with(Format::QuadtreeFicV1, path)
     }
 
@@ -78,7 +78,7 @@ impl Compressed {
     }
 
     #[cfg(feature = "persist-as-binary-v1")]
-    pub fn read_from_qfic_v1(path: &Path) -> Result<Self, PersistenceError> {
+    pub fn read_from_binary_v1(path: &Path) -> Result<Self, PersistenceError> {
         let file = File::open(path)?;
         let reader = BufReader::new(file);
         let compressed = binary_v1::deserialize(reader)?;
