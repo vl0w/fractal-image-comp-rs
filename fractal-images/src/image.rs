@@ -22,7 +22,7 @@ pub use power_of_two::*;
 pub type Pixel = u8;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Display)]
-#[display(fmt = "{}x{})", width, height)]
+#[display(fmt = "{}x{}", width, height)]
 pub struct Size {
     width: u32,
     height: u32,
