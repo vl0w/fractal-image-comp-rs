@@ -19,7 +19,7 @@ impl TestImage {
 #[test]
 fn error_for_random_noise() {
     test_error(TestImage::RandomNoise256x256.generate(),
-               ErrorThreshold::RmsAnyLowerThan(100.0),
+               ErrorThreshold::AnyBlockBelowRms(100.0),
                5454.0,
                10.76);
 }

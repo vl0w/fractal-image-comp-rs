@@ -94,7 +94,7 @@ fn main() -> anyhow::Result<()> {
 
             let compressor = if let Some(rms_error_threshold) = rms_error_threshold {
                 compressor.with_error_threshold(
-                    compress::quadtree::ErrorThreshold::RmsAnyLowerThan(rms_error_threshold),
+                    compress::quadtree::ErrorThreshold::AnyBlockBelowRms(rms_error_threshold),
                 )
             } else {
                 compressor

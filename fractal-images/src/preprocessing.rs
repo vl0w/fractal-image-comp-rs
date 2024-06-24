@@ -80,8 +80,8 @@ where
 pub trait SafeableImage {
     fn save_image(&self, path: &Path, format: ImageFormat);
 
-    fn save_image_as_png(&self, path: &Path) {
-        self.save_image(path, ImageFormat::Png)
+    fn save_image_as_png<T: AsRef<Path>>(&self, path: T) {
+        self.save_image(path.as_ref(), ImageFormat::Png)
     }
 }
 

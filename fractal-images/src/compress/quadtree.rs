@@ -23,7 +23,7 @@ pub enum CompressionError {
     InvalidSize(#[from] SquareSizeDoesNotDivideImageSize),
 
     #[error(transparent)]
-    NoPowerOfTwo(#[from] NoPowerOfTwo)
+    NoPowerOfTwo(#[from] NoPowerOfTwo),
 }
 
 impl<I> Compressor<PowerOfTwo<Square<I>>>
@@ -32,7 +32,7 @@ where
 {
     pub fn new(image: PowerOfTwo<Square<I>>) -> Self {
         Self {
-            error_threshold: ErrorThreshold::default(),
+            error_threshold: ErrorThreshold::AnyBlockBelowRms((image.get_height() as f64).powf(0.5)),
             progress_fn: None,
             stats: Arc::new(stats::Stats::new(image.get_height())),
             image: Arc::new(image),
@@ -54,7 +54,7 @@ where
             .squared_blocks(range_block_size)?
             .into_iter()
             .map(PowerOfTwo::new)
-            .collect::<Result<Vec<_>,_>>()?;
+            .collect::<Result<Vec<_>, _>>()?;
 
         debug!(
             "Domain blocks: {} with size {}x{}",
@@ -106,7 +106,6 @@ where
                     warn!("Unable to map range block {}", rb);
                     Ok(vec![]) // TODO: Should this really be an Ok?
                 } else {
-
                     let res = rb.squared_blocks((rb.size as f64 / 2.0) as u32)?
                         .into_par_iter()
                         .map(PowerOfTwo::new)
@@ -115,10 +114,9 @@ where
                         .flat_map(|nrb| self.find_transformations_recursive(Arc::new(nrb)))
                         .flatten()
                         .collect::<Vec<_>>();
-                    
+
                     Ok(res)
                 }
-                
             }
         }
     }
@@ -156,8 +154,8 @@ impl Transformation {
             .filter(|(_, mapping)| mapping.is_some())
             .map(|(db, mapping)| (db, mapping.unwrap()))
             .find_any(|(_, mapping)| match error_threshold {
-                ErrorThreshold::RmsAnyLowerThan(acceptable_error) => {
-                    mapping.error < acceptable_error
+                ErrorThreshold::AnyBlockBelowRms(acceptable_error) => {
+                    mapping.error <= acceptable_error
                 }
             });
 
@@ -184,14 +182,7 @@ impl Transformation {
 
 #[derive(Copy, Clone, Debug)]
 pub enum ErrorThreshold {
-    // TODO: This is a lie -> We seek the best block, not any block
-    RmsAnyLowerThan(f64),
-}
-
-impl Default for ErrorThreshold {
-    fn default() -> Self {
-        Self::RmsAnyLowerThan(5.0)
-    }
+    AnyBlockBelowRms(f64),
 }
 
 mod stats {

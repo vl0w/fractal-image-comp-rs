@@ -43,13 +43,13 @@ pub enum PersistenceError {
 
 impl Compressed {
     #[cfg(feature = "persist-as-json")]
-    pub fn persist_as_json(&self, path: &Path) -> Result<u64, PersistenceError> {
-        self.persist_with(Format::Json, path)
+    pub fn persist_as_json<T: AsRef<Path>>(&self, path: T) -> Result<u64, PersistenceError> {
+        self.persist_with(Format::Json, path.as_ref())
     }
 
     #[cfg(feature = "persist-as-binary-v1")]
-    pub fn persist_as_binary_v1(&self, path: &Path) -> Result<u64, PersistenceError> {
-        self.persist_with(Format::QuadtreeFicV1, path)
+    pub fn persist_as_binary_v1<T: AsRef<Path>>(&self, path: T) -> Result<u64, PersistenceError> {
+        self.persist_with(Format::QuadtreeFicV1, path.as_ref())
     }
 
     fn persist_with(&self, format: Format, path: &Path) -> Result<u64, PersistenceError> {
@@ -60,12 +60,12 @@ impl Compressed {
             #[cfg(feature = "persist-as-binary-v1")]
             Format::QuadtreeFicV1 => binary_v1::serialize(self)?,
         };
-
-        // Write the JSON string to a file
+        
         let mut file = File::create(path)?;
         file.write_all(serialized.as_slice())?;
         file.sync_all()?;
 
+        // TODO: Illegal unwrap
         Ok(file.metadata().unwrap().len())
     }
 
