@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use thiserror::Error;
 
-use crate::image::{Image, Pixel, Size};
+use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 
 /// Represents a square image, i.e. an image whose [size](Size) is a square.
 ///
@@ -72,6 +72,12 @@ where
     }
     fn pixel(&self, x: u32, y: u32) -> Pixel {
         self.0.pixel(x, y)
+    }
+}
+
+impl<I> IterablePixels for Square<I> where I: IterablePixels {
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+        self.0.pixels_enumerated()
     }
 }
 

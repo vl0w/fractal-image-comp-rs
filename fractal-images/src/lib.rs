@@ -4,3 +4,4 @@ pub mod image;
 pub mod model;
 pub mod persistence;
 pub mod preprocessing;
+pub mod metrics;

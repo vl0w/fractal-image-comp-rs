@@ -9,10 +9,19 @@ use crate::image::OwnedImage;
 use crate::image::IntoRotated;
 use crate::model::{Compressed, Transformation};
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct Options {
     pub iterations: u8,
     pub keep_each_iteration: bool,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Options {
+            iterations: 10,
+            keep_each_iteration: false,
+        }
+    }
 }
 
 pub struct Decompressed {

@@ -155,6 +155,7 @@ pub trait Image: Send + Sync {
     fn pixel(&self, x: u32, y: u32) -> Pixel;
 }
 
+// TODO: This trait is useless. Could be of image itself!
 pub trait IterablePixels {
     fn pixels(&self) -> impl Iterator<Item=Pixel> {
         self.pixels_enumerated().map(|(pixel, _)| pixel)

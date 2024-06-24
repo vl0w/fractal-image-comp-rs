@@ -184,6 +184,7 @@ impl Transformation {
 
 #[derive(Copy, Clone, Debug)]
 pub enum ErrorThreshold {
+    // TODO: This is a lie -> We seek the best block, not any block
     RmsAnyLowerThan(f64),
 }
 

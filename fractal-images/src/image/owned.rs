@@ -1,8 +1,10 @@
-use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, MutableImage, Pixel, Size};
-use rand::{thread_rng, Rng};
+use rand::{Rng, SeedableRng};
 
-#[derive(Clone)]
+use crate::image::{Coords, Image, IterablePixels, MutableImage, Pixel, Size};
+use crate::image::iter::PixelIterator;
+
+/// A type which stores pixel values in a `Vec`.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct OwnedImage {
     size: Size,
     data: Vec<u8>,
@@ -10,10 +12,14 @@ pub struct OwnedImage {
 
 impl OwnedImage {
     pub fn random(size: Size) -> Self {
+        Self::random_with_seed(size, size.area() as u64)
+    }
+    
+    pub fn random_with_seed(size: Size, seed: u64) -> Self {
         let mut data = Vec::with_capacity((size.area()) as usize);
-
-        for _ in 0..(size.area()) {
-            data.push(thread_rng().gen_range(0..256) as Pixel);
+        let mut rng = rand::prelude::StdRng::seed_from_u64(seed);
+        for _ in 0..size.area() {
+            data.push(rng.gen_range(0..256) as Pixel);
         }
 
         Self { size, data }
