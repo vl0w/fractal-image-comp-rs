@@ -4,13 +4,13 @@ use crate::image::iter::PixelIterator;
 
 /// Generates a circle
 #[derive(Debug)]
-pub struct Circle {
+pub struct GenCircle {
     image_size: Size,
     radius: f64,
     center: Coords,
 }
 
-impl Circle {
+impl GenCircle {
     pub fn new(image_size: u32, radius: f64) -> Square<Self> {
         let circle = Self {
             image_size: Size::squared(image_size),
@@ -21,7 +21,7 @@ impl Circle {
     }
 }
 
-impl Image for Circle {
+impl Image for GenCircle {
     fn get_size(&self) -> Size {
         self.image_size
     }
@@ -42,7 +42,7 @@ impl Image for Circle {
     }
 }
 
-impl IterablePixels for Circle {
+impl IterablePixels for GenCircle {
     fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
         PixelIterator::new(self)
     }

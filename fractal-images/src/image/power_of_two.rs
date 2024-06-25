@@ -87,7 +87,6 @@ impl<I> IterablePixels for PowerOfTwo<I> where I: IterablePixels {
     }
 }
 
-
 fn is_power_of_two(val: u32) -> bool {
     val != 0 && (val & (val - 1)) == 0
 }

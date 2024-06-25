@@ -15,7 +15,6 @@ impl TestImage {
     }
 }
 
-
 #[test]
 fn error_for_random_noise() {
     test_error(TestImage::RandomNoise256x256.generate(),

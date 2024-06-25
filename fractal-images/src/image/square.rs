@@ -75,7 +75,10 @@ where
     }
 }
 
-impl<I> IterablePixels for Square<I> where I: IterablePixels {
+impl<I> IterablePixels for Square<I>
+where
+    I: IterablePixels,
+{
     fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
         self.0.pixels_enumerated()
     }

@@ -32,3 +32,17 @@ default = ["persist-as-binary-v1"]
 persist-as-binary-v1 = ["dep:byteorder", "dep:fxhash", "dep:miniz_oxide"]
 persist-as-json = ["dep:serde", "dep:serde_json"]
 generators = []
+
+[[example]]
+name = "circle"
+required-features = ['generators']
+
+[[example]]
+name = "circle_error_compressions"
+path = "examples/errors/circle.rs"
+required-features = ['generators']
+
+[[example]]
+name = "square_error_compressions"
+path = "examples/errors/square.rs"
+required-features = ['generators']

@@ -9,7 +9,7 @@ mod square;
 mod fake;
 mod power_of_two;
 #[cfg(feature = "generators")]
-mod circle;
+pub mod gen;
 
 pub use block::*;
 pub use downscale::*;
@@ -18,8 +18,6 @@ pub use rotate::*;
 pub use square::*;
 pub use fake::*;
 pub use power_of_two::*;
-#[cfg(feature = "generators")]
-pub use circle::*;
 
 
 /// A representation for a gray scale pixel value
