@@ -82,7 +82,6 @@ where
     }
 
     fn find_transformations_recursive(&self, rb: Arc<PowerOfTwo<SquaredBlock<I>>>) -> Result<Vec<Transformation>, CompressionError> {
-        // TODO: We require that I is a power of 2!
         debug!("Finding transformation for range block {}", rb);
         let rb = rb.as_inner();
 
