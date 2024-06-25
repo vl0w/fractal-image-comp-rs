@@ -65,8 +65,9 @@ impl Compressed {
         file.write_all(serialized.as_slice())?;
         file.sync_all()?;
 
-        // TODO: Illegal unwrap
-        Ok(file.metadata().unwrap().len())
+        let file_size = file.metadata()?.len();
+
+        Ok(file_size)
     }
 
     #[cfg(feature = "persist-as-json")]
