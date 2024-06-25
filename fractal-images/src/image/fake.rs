@@ -1,5 +1,4 @@
-use crate::image::{Coords, Image, IterablePixels, PowerOfTwo};
-use crate::image::iter::PixelIterator;
+use crate::image::{Image, PowerOfTwo};
 use crate::image::Pixel;
 use crate::image::Size;
 use crate::image::square::Square;
@@ -22,12 +21,6 @@ impl Image for FakeImage {
     }
 }
 
-impl IterablePixels for FakeImage {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
-        PixelIterator::new(self)
-    }
-}
-
 impl FakeImage {
     pub fn new(size: Size) -> Self {
         Self { size }
@@ -37,7 +30,7 @@ impl FakeImage {
     pub fn squared(size: u32) -> Square<Self> {
         Square::new(Self::new(Size::squared(size))).unwrap()
     }
-    
+
     /// Returns an image which is a square and whose size is a power of two.
     pub fn squared_power_of_two(exponent: u16) -> PowerOfTwo<Square<Self>> {
         let size = 2u32.pow(exponent as u32);

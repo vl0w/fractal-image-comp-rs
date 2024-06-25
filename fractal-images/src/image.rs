@@ -18,7 +18,7 @@ pub use rotate::*;
 pub use square::*;
 pub use fake::*;
 pub use power_of_two::*;
-
+use crate::image::iter::PixelIterator;
 
 /// A representation for a gray scale pixel value
 pub type Pixel = u8;
@@ -155,15 +155,14 @@ pub trait Image: Send + Sync {
     }
 
     fn pixel(&self, x: u32, y: u32) -> Pixel;
-}
 
-// TODO: This trait is useless. Could be of image itself!
-pub trait IterablePixels {
-    fn pixels(&self) -> impl Iterator<Item=Pixel> {
-        self.pixels_enumerated().map(|(pixel, _)| pixel)
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> where Self: Sized {
+        PixelIterator::new(self)
     }
 
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)>;
+    fn pixels(&self) -> impl Iterator<Item=Pixel> where Self: Sized {
+        self.pixels_enumerated().map(|(pixel, _)| pixel)
+    }
 }
 
 pub trait MutableImage {

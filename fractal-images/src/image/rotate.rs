@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
-use crate::image::iter::PixelIterator;
+use crate::image::{Image, Pixel, Size};
 use crate::model::Rotation;
 
 pub trait IntoRotated<I>
@@ -95,15 +94,6 @@ where
                 .pixel(self.get_width() - 1 - x, self.get_height() - 1 - y),
             Rotation::By270 => self.image.pixel(self.get_height() - 1 - y, x),
         }
-    }
-}
-
-impl<I> IterablePixels for Rotated<I>
-where
-    I: Image,
-{
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
-        PixelIterator::new(self)
     }
 }
 

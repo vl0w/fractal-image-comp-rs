@@ -1,7 +1,6 @@
 use rand::{Rng, SeedableRng};
 
-use crate::image::{Coords, Image, IterablePixels, MutableImage, Pixel, Size};
-use crate::image::iter::PixelIterator;
+use crate::image::{Image, MutableImage, Pixel, Size};
 
 /// A type which stores pixel values in a `Vec`.
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -45,12 +44,6 @@ impl MutableImage for OwnedImage {
         assert!(y < self.get_height());
         let idx = (y * self.get_width() + x) as usize;
         self.data[idx] = value;
-    }
-}
-
-impl IterablePixels for OwnedImage {
-    fn pixels_enumerated(&self) -> impl Iterator<Item = (Pixel, Coords)> {
-        PixelIterator::new(self)
     }
 }
 

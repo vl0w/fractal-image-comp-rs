@@ -1,4 +1,4 @@
-use crate::image::{Image, IterablePixels};
+use crate::image::Image;
 use tracing::trace;
 
 pub mod quadtree;
@@ -13,8 +13,8 @@ struct Mapping {
 impl Mapping {
     fn compute<A, B>(domain: &A, range: &B) -> Option<Self>
     where
-        A: Image + IterablePixels,
-        B: Image + IterablePixels,
+        A: Image,
+        B: Image,
     {
         assert_eq!(domain.get_height(), range.get_height());
         assert_eq!(domain.get_width(), range.get_width());

@@ -1,5 +1,4 @@
-use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel, PowerOfTwo, Size, Square};
+use crate::image::{Image, Pixel, PowerOfTwo, Size, Square};
 use image::imageops::FilterType;
 use image::{DynamicImage, GrayImage, ImageFormat};
 use std::cmp::min;
@@ -38,7 +37,7 @@ impl SquaredGrayscaleImage {
             pixels: grayscale,
             size: Size::squared(size),
         }).expect("Unable to create a square image");
-        
+
         PowerOfTwo::new(image).expect("Unable to downscale image to a power of two")
     }
 }
@@ -54,19 +53,13 @@ impl Image for SquaredGrayscaleImage {
     }
 }
 
-impl IterablePixels for SquaredGrayscaleImage {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
-        PixelIterator::new(self)
-    }
-}
-
 pub trait AsDynamicImage {
     fn as_dynamic_image(&self) -> DynamicImage;
 }
 
 impl<T> AsDynamicImage for T
 where
-    T: Image + IterablePixels,
+    T: Image,
 {
     fn as_dynamic_image(&self) -> DynamicImage {
         debug!("Converting image to dynamic image");

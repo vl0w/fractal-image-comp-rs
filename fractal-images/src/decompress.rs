@@ -2,7 +2,7 @@ use std::sync::Arc;
 
 use tracing::instrument;
 
-use crate::image::{Image, IterablePixels, MutableImage};
+use crate::image::{Image, MutableImage};
 use crate::image::SquaredBlock;
 use crate::image::IntoDownscaled;
 use crate::image::OwnedImage;

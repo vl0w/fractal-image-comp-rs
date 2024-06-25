@@ -1,7 +1,7 @@
 use std::sync::Arc;
 use derive_more::Display;
 use thiserror::Error;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
+use crate::image::{Coords, Image, Pixel, Size};
 
 /// Represents an image with dimensions that are powers of two.
 ///
@@ -79,10 +79,11 @@ where
     fn pixel(&self, x: u32, y: u32) -> Pixel {
         self.0.pixel(x, y)
     }
-}
 
-impl<I> IterablePixels for PowerOfTwo<I> where I: IterablePixels {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
+    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)>
+    where
+        Self: Sized,
+    {
         self.0.pixels_enumerated()
     }
 }

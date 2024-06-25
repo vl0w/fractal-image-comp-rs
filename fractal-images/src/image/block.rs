@@ -1,10 +1,11 @@
 use std::fmt::Debug;
-use derive_more::Display;
 use std::sync::Arc;
+
+use derive_more::Display;
+
 pub use conversion::*;
 
-use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
+use crate::image::{Coords, Image, Pixel, Size};
 
 #[derive(Display, Debug, Eq, PartialEq)]
 #[display(fmt = "Block² {} {}", size, origin)]
@@ -45,19 +46,14 @@ impl<I: Image> Image for SquaredBlock<I> {
     }
 }
 
-impl<I: Image + Send + Sync> IterablePixels for SquaredBlock<I> {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
-        PixelIterator::new(self)
-    }
-}
-
 /// Logic to turn something into [SquaredBlock]s.
 mod conversion {
     use itertools::Itertools;
     use thiserror::Error;
+
     use crate::coords;
-    use crate::image::block::SquaredBlock;
     use crate::image::{Coords, Image, Size, Square};
+    use crate::image::block::SquaredBlock;
     use crate::model::Block;
 
     pub trait IntoSquaredBlocks<I> {

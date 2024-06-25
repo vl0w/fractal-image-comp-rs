@@ -1,6 +1,5 @@
 use crate::coords;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size, Square};
-use crate::image::iter::PixelIterator;
+use crate::image::{Coords, Image, Pixel, Size, Square};
 
 /// Generates a circle
 #[derive(Debug)]
@@ -39,11 +38,5 @@ impl Image for GenCircle {
         } else {
             0
         }
-    }
-}
-
-impl IterablePixels for GenCircle {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
-        PixelIterator::new(self)
     }
 }

@@ -1,7 +1,8 @@
-use crate::image::iter::PixelIterator;
-use crate::image::{Coords, Image, IterablePixels, Pixel, Size};
 use std::sync::Arc;
+
 pub use conversion::*;
+
+use crate::image::{Image, Pixel, Size};
 
 pub struct Downscaled2x2<I> {
     image: Arc<I>,
@@ -37,6 +38,7 @@ impl<I: Image> Image for Downscaled2x2<I> {
 
 mod conversion {
     use std::sync::Arc;
+
     use crate::image::{Downscaled2x2, Image, Square, SquaredBlock};
 
     pub trait IntoDownscaled<I>
@@ -73,16 +75,11 @@ mod conversion {
     }
 }
 
-impl<I: Image> IterablePixels for Downscaled2x2<I> {
-    fn pixels_enumerated(&self) -> impl Iterator<Item=(Pixel, Coords)> {
-        PixelIterator::new(self)
-    }
-}
-
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::image::fake::FakeImage;
+
+    use super::*;
 
     #[test]
     fn downscaled_size() {

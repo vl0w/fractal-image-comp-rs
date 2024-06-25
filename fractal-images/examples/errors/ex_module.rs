@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use cli_table::Table;
 
 use fractal_image::{compress, decompress};
-use fractal_image::image::{Image, IterablePixels, PowerOfTwo, Size, Square};
+use fractal_image::image::{Image, PowerOfTwo, Size, Square};
 use fractal_image::preprocessing::SafeableImage;
 
 #[derive(Table)]
@@ -20,7 +20,7 @@ pub struct Comparison {
     compression_ratio: f32,
 }
 
-pub fn compare_to_png_compression<I: Image + IterablePixels + Debug>(image: I) -> Comparison {
+pub fn compare_to_png_compression<I: Image + Debug>(image: I) -> Comparison {
     let image_size = image.get_size();
     println!("Compressing image {}", image_size);
     let image = Square::new(image).expect("Image size needs to be square");

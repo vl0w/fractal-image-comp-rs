@@ -1,13 +1,13 @@
 use std::cmp::max;
 use thiserror::Error;
-use crate::image::{Image, IterablePixels, Size};
+use crate::image::{Image, Size};
 
 #[derive(Error, Debug, Clone, Copy, Eq, PartialEq)]
 #[error("Can not compare images with different sizes ({} != {})", 0, 1)]
 pub struct ImageSizeMismatch(Size, Size);
 
 /// Computes the [MSE](https://en.wikipedia.org/wiki/Mean_squared_error) metric of two images.
-pub fn mse<A: Image + IterablePixels, B: Image + IterablePixels>(first: &A, second: &B) -> Result<f64, ImageSizeMismatch> {
+pub fn mse<A: Image, B: Image>(first: &A, second: &B) -> Result<f64, ImageSizeMismatch> {
     if first.get_size() != second.get_size() {
         return Err(ImageSizeMismatch(first.get_size(), second.get_size()));
     }
@@ -22,7 +22,7 @@ pub fn mse<A: Image + IterablePixels, B: Image + IterablePixels>(first: &A, seco
 }
 
 /// Computes the [PSNR](https://en.wikipedia.org/wiki/Peak_signal-to-noise_ratio) metric of two images.
-pub fn psnr<A: Image + IterablePixels, B: Image + IterablePixels>(first: &A, second: &B) -> Result<f64, ImageSizeMismatch> {
+pub fn psnr<A: Image, B: Image>(first: &A, second: &B) -> Result<f64, ImageSizeMismatch> {
     let mse = mse(first, second)?;
     let max_a = first.pixels().max().unwrap_or(0);
     let max_b = second.pixels().max().unwrap_or(0);
