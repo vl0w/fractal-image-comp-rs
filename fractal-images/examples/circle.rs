@@ -1,6 +1,7 @@
 use fractal_image::compress;
 use fractal_image::decompress;
-use fractal_image::image::{GenCircle, PowerOfTwo};
+use fractal_image::image::gen::GenCircle;
+use fractal_image::image::PowerOfTwo;
 use fractal_image::preprocessing::SafeableImage;
 
 fn main() {
